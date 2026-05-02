@@ -1,0 +1,4 @@
+name: TemplateDrivenReportAgent
+type: agent
+inputs: [AnalysisResults, Insights, SelectedTemplate]
+outputs: [ReportPDF, ReportMarkdown, ReportJSON]

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>系统设置 - Brand Listener</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900 antialiased">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-slate-900 text-white fixed h-full z-20 flex flex-col">
+    <div class="p-5 border-b border-slate-800"><div class="flex items-center gap-2"><iconify-icon icon="mdi:ShieldSearch" class="text-2xl text-indigo-400"></iconify-icon><span class="font-bold text-base">BrandListen AI</span></div></div>
+    <nav class="flex-1 p-3 space-y-1 text-sm">
+      <a href="/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:view-dashboard"></iconify-icon>仪表盘首页</a>
+      <a href="/competitor" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:radar"></iconify-icon>竞品监听管理</a>
+      <a href="/culture" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:account-group"></iconify-icon>品牌文化监听</a>
+      <a href="/voc" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:comment-quote"></iconify-icon>用户之声分析</a>
+      <a href="/report" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:file-chart"></iconify-icon>报告生成中心</a>
+      <a href="/weibo" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:sina-weibo"></iconify-icon>微博监听</a>
+      <div class="pt-4 pb-1 px-3 text-xs text-slate-600 uppercase tracking-wider">系统管理</div>
+      <a href="/settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-600 text-white font-medium transition"><iconify-icon icon="mdi:cog"></iconify-icon>系统设置</a>
+    </nav>
+  </aside>
+  <!-- Main -->
+  <div class="ml-64 p-8">
+    <!-- Header -->
+    <div class="mb-8"><h1 class="text-2xl font-bold text-slate-900">系统设置</h1><p class="text-sm text-slate-500 mt-1">管理监控品牌、数据源和团队权限</p></div>
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <!-- Left settings nav -->
+      <div class="space-y-1">
+        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-50 text-indigo-600 font-medium text-sm text-left transition">监控品牌库</button>
+        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 text-sm text-left transition">数据源与 API</button>
+        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 text-sm text-left transition">成员与权限管理</button>
+        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 text-sm text-left transition">预警推送通知</button>
+        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 text-sm text-left transition">系统操作日志</button>
+      </div>
+      <!-- Right content -->
+      <div class="lg:col-span-3 space-y-6">
+        <!-- Brand list -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <div class="flex items-center justify-between mb-4"><h3 class="font-semibold text-slate-900">监控品牌库 <span id="brandCount" class="text-sm font-normal text-slate-400">(0)</span></h3><button id="addBrandBtn" class="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700"><iconify-icon icon="mdi:plus"></iconify-icon>添加品牌</button></div>
+          <table class="w-full text-sm">
+            <thead><tr class="text-left text-slate-400 border-b border-slate-100"><th class="pb-3 font-medium">品牌名称</th><th class="pb-3 font-medium">微博 UID</th><th class="pb-3 font-medium">平台</th><th class="pb-3 font-medium">状态</th><th class="pb-3 font-medium">操作</th></tr></thead>
+            <tbody id="brandTableBody">
+              <tr><td colspan="5" class="py-8 text-center text-sm text-slate-400">加载中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Add Brand Modal -->
+        <div id="addBrandModal" class="fixed inset-0 bg-black/40 z-50 hidden flex items-center justify-center">
+          <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+            <div class="flex items-center justify-between mb-4"><h3 class="font-semibold text-slate-900">添加监控品牌</h3><button id="closeModalBtn" class="text-slate-400 hover:text-slate-600"><iconify-icon icon="mdi:close"></iconify-icon></button></div>
+            <div class="space-y-4">
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">品牌标识 (ID)</label><input id="formId" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="如: our_brand" /></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">品牌名称</label><input id="formName" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="如: 我方品牌 (BrandListen)" /></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">微博 UID/域名</label><input id="formUid" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="如: brandlisten_official" /></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1">微博主页 URL</label><input id="formUrl" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="https://weibo.com/brandlisten_official" /></div>
+              <div class="flex items-center gap-2"><input type="checkbox" id="formEnabled" checked class="rounded text-indigo-600" /><label for="formEnabled" class="text-sm text-slate-700">启用监听</label></div>
+            </div>
+            <div class="flex gap-3 mt-6">
+              <button id="cancelModalBtn" class="flex-1 border border-slate-200 text-slate-600 py-2 rounded-lg text-sm hover:bg-slate-50">取消</button>
+              <button id="saveBrandBtn" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700">保存</button>
+            </div>
+            <p id="formError" class="text-sm text-rose-600 mt-2 hidden"></p>
+          </div>
+        </div>
+        <!-- Data sources -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <h3 class="font-semibold text-slate-900 mb-4">数据源与 API 状态</h3>
+          <!-- Follow 导入说明 -->
+          <div class="mb-5 bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex gap-3">
+            <iconify-icon icon="mdi:database-import" class="text-indigo-500 text-xl shrink-0 mt-0.5"></iconify-icon>
+            <div>
+              <p class="text-sm font-medium text-indigo-900 mb-1">如何导入 Follow 数据库</p>
+              <ol class="text-xs text-indigo-700 space-y-1 list-decimal list-inside">
+                <li>找到 Follow 本地数据库文件，路径通常为：<br>
+                  <code class="bg-white/70 px-1.5 py-0.5 rounded text-indigo-800 font-mono">C:\Users\[你的用户名]\AppData\Roaming\Follow\follow.db</code>
+                </li>
+                <li>前往「<a href="/weibo" class="underline font-medium">微博监听</a>」页面，点击右上角「上传导出」按钮</li>
+                <li>选择 <strong>follow.db</strong> 文件上传，系统将自动解析并更新 feed</li>
+              </ol>
+              <p class="text-xs text-indigo-500 mt-2">Follow 中订阅的所有微博账号内容将自动同步到本系统，无需额外配置。</p>
+            </div>
+          </div>
+          <div class="grid md:grid-cols-3 gap-4">
+            <div class="border border-slate-100 rounded-xl p-4"><div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-500"></span><span class="font-medium text-sm">天猫/淘宝 API</span></div><div class="h-1 rounded-full bg-slate-100 mb-2"><div class="h-1 rounded-full bg-indigo-600" style="width:76%"></div></div><p class="text-xs text-slate-400">剩余配额 2,400 / 10,000</p></div>
+            <div class="border border-slate-100 rounded-xl p-4"><div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-500"></span><span class="font-medium text-sm">小红书 合规爬虫</span></div><div class="h-1 rounded-full bg-slate-100 mb-2"><div class="h-1 rounded-full bg-indigo-600" style="width:100%"></div></div><p class="text-xs text-slate-400">延迟 120ms · 健康</p></div>
+            <div class="border border-rose-100 rounded-xl p-4 bg-rose-50/30"><div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span><span class="font-medium text-sm">抖音 接口异常</span></div><div class="h-1 rounded-full bg-slate-100 mb-2"><div class="h-1 rounded-full bg-rose-500" style="width:0%"></div></div><p class="text-xs text-rose-600">Token 过期，请重新授权</p></div>
+          </div>
+        </div>
+        <!-- Team -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <h3 class="font-semibold text-slate-900 mb-4">团队成员与权限</h3>
+          <table class="w-full text-sm">
+            <thead><tr class="text-left text-slate-400 border-b border-slate-100"><th class="pb-3 font-medium">成员信息</th><th class="pb-3 font-medium">角色</th><th class="pb-3 font-medium">最后活跃</th><th class="pb-3 font-medium">操作</th></tr></thead>
+            <tbody>
+              <tr class="border-b border-slate-50"><td class="py-3"><div class="flex items-center gap-3"><img src="https://modao.cc/agent-py/static/source/images/placeholder.svg" class="w-8 h-8 rounded-full bg-slate-200" /><div><div class="font-medium text-slate-900">张经理</div><div class="text-xs text-slate-400">zhang@brandlisten.com</div></div></div></td><td class="py-3">系统管理员</td><td class="py-3 text-slate-400">刚刚在线</td><td class="py-3"><span class="text-slate-300 cursor-not-allowed text-sm">修改</span></td></tr>
+              <tr><td class="py-3"><div class="flex items-center gap-3"><img src="https://modao.cc/agent-py/static/source/images/placeholder.svg" class="w-8 h-8 rounded-full bg-slate-200" /><div><div class="font-medium text-slate-900">李小美</div><div class="text-xs text-slate-400">li@brandlisten.com</div></div></div></td><td class="py-3">品牌分析师</td><td class="py-3 text-slate-400">10小时前</td><td class="py-3"><a href="#" class="text-indigo-600 hover:underline text-sm">修改</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="/static/api.js"></script>
+  <script>
+    async function loadBrands() {
+      try {
+        const resp = await fetch('/api/brands');
+        const data = await resp.json();
+        const brands = data.brands || [];
+        const tbody = document.getElementById('brandTableBody');
+        document.getElementById('brandCount').textContent = `(${brands.length})`;
+
+        if (brands.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-sm text-slate-400">暂无品牌配置 — 点击"添加品牌"开始</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = brands.map(b => `
+          <tr class="border-b border-slate-50">
+            <td class="py-3 font-medium text-slate-900">${escapeHtml(b.name)}</td>
+            <td class="py-3 text-sm text-slate-500">${escapeHtml(b.weibo_uid)}</td>
+            <td class="py-3 text-sm text-slate-500">${(b.platforms || []).join(', ')}</td>
+            <td class="py-3">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${b.enabled ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}">
+                ${b.enabled ? '监听中' : '已暂停'}
+              </span>
+            </td>
+            <td class="py-3">
+              <button class="text-rose-600 hover:text-rose-800 text-sm delete-brand" data-id="${escapeHtml(b.id)}">删除</button>
+            </td>
+          </tr>
+        `).join('');
+
+        // Attach delete handlers
+        document.querySelectorAll('.delete-brand').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            if (!confirm(`确定删除品牌 "${id}" 吗？`)) return;
+            try {
+              const resp = await fetch(`/api/brands/${encodeURIComponent(id)}`, { method: 'DELETE' });
+              if (!resp.ok) throw new Error('Delete failed');
+              await loadBrands();
+            } catch (e) {
+              alert('删除失败: ' + e.message);
+            }
+          });
+        });
+      } catch (e) {
+        document.getElementById('brandTableBody').innerHTML =
+          `<tr><td colspan="5" class="py-8 text-center text-sm text-rose-500">加载失败: ${e.message}</td></tr>`;
+      }
+    }
+
+    // Modal handling
+    function showModal() { document.getElementById('addBrandModal').classList.remove('hidden'); }
+    function hideModal() { document.getElementById('addBrandModal').classList.add('hidden'); }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadBrands();
+
+      document.getElementById('addBrandBtn')?.addEventListener('click', showModal);
+      document.getElementById('closeModalBtn')?.addEventListener('click', hideModal);
+      document.getElementById('cancelModalBtn')?.addEventListener('click', hideModal);
+      document.getElementById('addBrandModal')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) hideModal();
+      });
+
+      // Save new brand
+      document.getElementById('saveBrandBtn')?.addEventListener('click', async () => {
+        const id = document.getElementById('formId').value.trim();
+        const name = document.getElementById('formName').value.trim();
+        const uid = document.getElementById('formUid').value.trim();
+        const url = document.getElementById('formUrl').value.trim();
+        const enabled = document.getElementById('formEnabled').checked;
+        const errEl = document.getElementById('formError');
+
+        if (!id || !name || !uid || !url) {
+          errEl.textContent = '请填写所有必填字段';
+          errEl.classList.remove('hidden');
+          return;
+        }
+        errEl.classList.add('hidden');
+
+        try {
+          const resp = await fetch('/api/brands', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, name, weibo_uid: uid, weibo_url: url, platforms: ['weibo'], enabled }),
+          });
+          if (!resp.ok) {
+            const errData = await resp.json();
+            throw new Error(errData.detail || '保存失败');
+          }
+          hideModal();
+          // Clear form
+          ['formId','formName','formUid','formUrl'].forEach(f => document.getElementById(f).value = '');
+          document.getElementById('formEnabled').checked = true;
+          await loadBrands();
+        } catch (e) {
+          errEl.textContent = e.message;
+          errEl.classList.remove('hidden');
+        }
+      });
+    });
+  </script>
+</body>

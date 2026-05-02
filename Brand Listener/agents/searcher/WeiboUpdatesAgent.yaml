@@ -1,0 +1,30 @@
+name: WeiboUpdatesAgent
+type: sub-agent
+parent: OfficialUpdatesAgent
+description: |
+  Sub-agent of OfficialUpdatesAgent, responsible for fetching Weibo official account
+  updates via FOLO SQLite export (follow.db). Filters entries to weibo.com platform only.
+platform: weibo
+module: src.agents.searcher.weibo_updates_agent
+class: WeiboUpdatesAgent
+config:
+  max_sources: 50
+  lookback_hours: 24
+  folo_config:
+    exporter_type: "file"
+    export_path: "./data/exports"
+    file_pattern: "*.db"
+    lookback_hours: 24
+input_schema:
+  sources:
+    type: array
+    items:
+      type: string
+      format: uri
+    description: Weibo account URLs to monitor
+output_schema:
+  updates:
+    type: array
+    items:
+      $ref: "OfficialUpdatesAgent.yaml#/definitions/OfficialUpdate"
+    description: Weibo-only OfficialUpdate list, merged by parent OfficialUpdatesAgent

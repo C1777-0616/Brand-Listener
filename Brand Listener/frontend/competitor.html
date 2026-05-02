@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>竞品监听管理 - Brand Listener</title>
+<script src="https://modao.cc/agent-py/static/source/js/tailwindcss.3.4.3.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900">
+<div class="flex min-h-screen">
+<!-- 侧边栏 -->
+<aside class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col fixed h-full z-20">
+<div class="p-6 flex items-center gap-3 border-b border-slate-800">
+<iconify-icon class="text-3xl text-indigo-400" icon="mdi:ShieldSearch"></iconify-icon>
+<span class="text-xl font-bold tracking-tight text-white">BrandListen AI</span>
+</div>
+<nav class="flex-1 p-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="/">
+<iconify-icon class="text-xl" icon="mdi:view-dashboard"></iconify-icon> 仪表盘首页
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-indigo-600 rounded-lg text-white font-medium transition-all group" href="/competitor">
+<iconify-icon class="text-xl" icon="mdi:radar"></iconify-icon> 竞品监听管理
+</a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="/culture">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:account-group"></iconify-icon> 品牌文化监听
+</a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="/voc">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:comment-quote"></iconify-icon> 用户之声分析
+</a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="/report">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:file-chart"></iconify-icon> 报告生成中心
+</a>
+<div class="pt-4 pb-2 text-xs font-semibold text-slate-500 uppercase px-4">系统管理</div>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="/settings">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:cog"></iconify-icon> 系统设置
+</a>
+</nav>
+</aside>
+<main class="flex-1 ml-64 p-8">
+<header class="flex justify-between items-center mb-8">
+<div>
+<h1 class="text-2xl font-bold text-slate-800">品牌全平台动态流</h1>
+<p class="text-slate-500">配置全网监控规则，实时捕获竞争对手的每一个动作。</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2">
+<iconify-icon icon="mdi:export"></iconify-icon> 导出分析
+</button>
+<button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all flex items-center gap-2">
+<iconify-icon icon="mdi:cog-transfer"></iconify-icon> 批量同步配置
+</button>
+</div>
+</header>
+<!-- 选项卡导航 -->
+<div class="flex border-b border-slate-200 mb-8 overflow-x-auto" id="tabBar">
+<button class="px-6 py-3 border-b-2 border-indigo-600 text-indigo-600 font-bold whitespace-nowrap tab-btn" data-tab="feed">品牌社媒动态流</button>
+<button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap tab-btn" data-tab="ecom">电商平台配置</button>
+<button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap tab-btn" data-tab="social">社媒动态</button>
+<button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap tab-btn" data-tab="price">价格走势监控</button>
+</div>
+<!-- 过滤器 -->
+<div id="filterBar" class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-8 flex flex-wrap gap-4 items-center">
+<div class="flex items-center gap-2">
+<span class="text-sm text-slate-500">平台:</span>
+<select id="platformSelect" class="text-sm border border-slate-200 rounded-lg bg-slate-50 px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500">
+<option>全部平台</option>
+<option>天猫/淘宝</option>
+<option>京东</option>
+<option>小红书</option>
+<option>抖音</option>
+<option>微博</option>
+<option>bilibili</option>
+</select>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-slate-500">品牌:</span>
+<select id="brandSelect" class="text-sm border border-slate-200 rounded-lg bg-slate-50 px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500">
+<option value="">全部竞品</option>
+</select>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-slate-500">类型:</span>
+<select id="typeSelect" class="text-sm border border-slate-200 rounded-lg bg-slate-50 px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500">
+<option value="">全部类型</option>
+</select>
+</div>
+<div class="ml-auto relative">
+<input id="searchInput" class="pl-10 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-64" placeholder="搜索关键词..." type="text"/>
+<iconify-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" icon="mdi:magnify"></iconify-icon>
+</div>
+</div>
+<!-- 监听流列表 -->
+<div class="space-y-6" id="feedList">
+<!-- 动态项 1 -->
+<div class="mock-card bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+<div class="p-6">
+<div class="flex items-start gap-4">
+<div class="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border border-slate-100">
+<img alt="Product" class="w-full h-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/7875ad7b03ed4edbb4bbc3bf883eaf1a.jpg"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-2">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 bg-rose-100 text-rose-600 text-[10px] font-bold rounded uppercase">价格调整</span>
+<span class="px-2 py-0.5 bg-blue-100 text-blue-600 text-[10px] font-bold rounded uppercase">京东</span>
+</div>
+<h3 class="text-lg font-bold text-slate-800">竞品A 旗舰店核心SKU价格跳水</h3>
+</div>
+<span class="text-sm text-slate-400 font-mono">2026-04-10 10:24</span>
+</div>
+<p class="text-slate-600 text-sm mb-4">监测到竞品A旗舰店将其主力机型[AirX 2026]从原价 ¥2,999 调整为 ¥2,399，降幅达20%。初步判断为应对我方即将开启的春季促销。</p>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-1 text-slate-500 text-xs">
+<iconify-icon icon="mdi:eye"></iconify-icon> 1,280 曝光
+</div>
+<div class="flex items-center gap-1 text-slate-500 text-xs">
+<iconify-icon icon="mdi:cart"></iconify-icon> 预计转化率 +15%
+</div>
+<div class="ml-auto flex gap-2">
+<button class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100">生成对标建议</button>
+<button class="px-3 py-1 border border-slate-200 text-slate-600 text-xs font-bold rounded hover:bg-slate-50">标记已处理</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 动态项 2 -->
+<div class="mock-card bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+<div class="p-6">
+<div class="flex items-start gap-4">
+<div class="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-indigo-50 flex items-center justify-center">
+<iconify-icon class="text-4xl text-indigo-400" icon="mdi:bullhorn-outline"></iconify-icon>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-2">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 bg-green-100 text-green-600 text-[10px] font-bold rounded uppercase">营销活动</span>
+<span class="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded uppercase">小红书</span>
+</div>
+<h3 class="text-lg font-bold text-slate-800">竞品B 联名快闪店线下预热</h3>
+</div>
+<span class="text-sm text-slate-400 font-mono">2026-04-10 09:15</span>
+</div>
+<p class="text-slate-600 text-sm mb-4">通过小红书多位头部KOL发布的笔记发现，竞品B计划于4月15日在上海静安区开设为期7天的[城市丛林]联名快闪店。目前社媒声量正处于上升期，预计辐射人数超过500万。</p>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-1 text-slate-500 text-xs">
+<iconify-icon icon="mdi:heart"></iconify-icon> 52.4k 点赞
+</div>
+<div class="flex items-center gap-1 text-slate-500 text-xs">
+<iconify-icon icon="mdi:share-variant"></iconify-icon> 8.2k 转发
+</div>
+<div class="ml-auto flex gap-2">
+<button class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100">查看KOL清单</button>
+<button class="px-3 py-1 border border-slate-200 text-slate-600 text-xs font-bold rounded hover:bg-slate-50">加入周报</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 动态项 3 (新品发布) -->
+<div class="mock-card bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+<div class="p-6 border-l-4 border-indigo-600">
+<div class="flex items-start gap-4">
+<div class="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border border-slate-100">
+<img alt="New Launch" class="w-full h-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/8cddcd560fbc403bbc8b3b8b6f24f032.jpg"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-2">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 bg-indigo-600 text-white text-[10px] font-bold rounded uppercase">重大新品发布</span>
+<span class="px-2 py-0.5 bg-slate-800 text-white text-[10px] font-bold rounded uppercase">多平台同步</span>
+</div>
+<h3 class="text-lg font-bold text-slate-800">竞品C 全球首发AI智能家居中控</h3>
+</div>
+<span class="text-sm text-slate-400 font-mono">2026-04-09 20:00</span>
+</div>
+<p class="text-slate-600 text-sm mb-4">竞品C正式发布其旗舰级AI中控系统。该产品采用了最新的[大模型内核]，支持多模态交互。天猫预售开启1小时内，订单量已突破5,000台。对我方核心产品[智能家庭管家]构成直接威胁。</p>
+<div class="flex items-center gap-4">
+<div class="flex -space-x-2">
+<img alt="U1" class="w-6 h-6 rounded-full border-2 border-white" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/c669ae459d7d4c17bf6d596f511a1d4b.jpg"/>
+<img alt="U2" class="w-6 h-6 rounded-full border-2 border-white" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/79f1cb0abf3c452d8200b28d61cb1a9b.jpg"/>
+<img alt="U3" class="w-6 h-6 rounded-full border-2 border-white" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/a18ea31332c448baa08cabe0f28a15ef.jpg"/>
+<div class="w-6 h-6 rounded-full bg-slate-100 border-2 border-white text-[8px] flex items-center justify-center font-bold text-slate-500">+12</div>
+</div>
+<span class="text-xs text-slate-400">已有15位分析师对此动态标注"高关注"</span>
+<div class="ml-auto flex gap-2">
+<button class="px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded hover:bg-indigo-700">启动竞品拆解分析</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="dynamicFeed"></div>
+<!-- 加载更多 --></div>
+<!-- 电商平台配置 -->
+<div id="ecomSection" class="hidden">
+  <div id="ecomContent"></div>
+</div>
+<!-- 社媒动态 -->
+<div id="socialSection" class="hidden">
+  <div id="socialContent"></div>
+</div>
+<!-- 价格走势监控 -->
+<div id="priceSection" class="hidden">
+  <div id="priceContent"></div>
+</div>
+<!-- 加载更多 -->
+<div class="mt-8 text-center">
+<button class="px-6 py-2 bg-white border border-slate-200 rounded-full text-sm text-slate-600 hover:bg-slate-50 transition-all">加载更多历史动态...</button>
+</div>
+</main>
+</div>
+<script>
+  // Tab switching
+  let activeTab = 'feed';
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('border-indigo-600', 'text-indigo-600', 'font-bold');
+        b.classList.add('border-transparent', 'text-slate-500');
+      });
+      btn.classList.remove('border-transparent', 'text-slate-500');
+      btn.classList.add('border-indigo-600', 'text-indigo-600', 'font-bold');
+      activeTab = btn.dataset.tab;
+      renderFeed();
+      // 过滤器只在 feed tab 显示
+      document.getElementById('filterBar').style.display = activeTab === 'feed' ? 'flex' : 'none';
+    });
+  });
+
+  // Feed data
+  let allEntries = [];
+
+  // 去掉 feed_title 中的平台后缀，提取统一品牌名
+  function extractBrandName(raw) {
+    const name = (raw || '').replace(/[\s]*(的)?[\s]*(微博|bilibili|b站|小红书|抖音|快手|微信)[\s]*(动态|笔记|视频)?/gi, '').trim();
+    return normalizeBrand(name);
+  }
+
+  // 品牌名称规范化：同品牌不同写法合并为统一名称
+  const BRAND_NORMALIZE = {
+    '佳洁士Crest': '佳洁士',
+    '佳洁士crest': '佳洁士',
+    '佳洁士Crest口腔护理': '佳洁士',
+    '参半口腔': '参半',
+    '参半口腔护理': '参半',
+    '舒客Saky': '舒客',
+    '舒客saky': '舒客',
+    'Saky': '舒客',
+    'usmile笑容加': 'usmile',
+    'USmile笑容加': 'usmile',
+    'bixdo倍至': '倍至',
+  };
+  function normalizeBrand(name) {
+    return BRAND_NORMALIZE[name] || name;
+  }
+
+  const TYPE_LABELS = {
+    new_product:      '新品发布',
+    promotion:        '促销活动',
+    kol_collab:       '代言合作',
+    user_engagement:  '用户互动',
+    product_content:  '产品种草',
+    offline_event:    '线下活动',
+    corporate_news:   '企业资讯',
+    brand_content:    '品牌内容',
+  };
+
+  const TYPE_COLORS = {
+    new_product:      'bg-indigo-100 text-indigo-700',
+    promotion:        'bg-red-100 text-red-600',
+    kol_collab:       'bg-purple-100 text-purple-700',
+    user_engagement:  'bg-green-100 text-green-700',
+    product_content:  'bg-amber-100 text-amber-700',
+    offline_event:    'bg-cyan-100 text-cyan-700',
+    corporate_news:   'bg-slate-100 text-slate-600',
+    brand_content:    'bg-slate-100 text-slate-500',
+  };
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function matchPlatform(p, label) {
+    if (label === '全部平台') return true;
+    if (label === '微博') return p === 'weibo';
+    if (label === '小红书') return p === 'xiaohongshu';
+    if (label === '抖音') return p === 'douyin';
+    if (label === '京东') return p === 'jd';
+    if (label === '天猫/淘宝') return p === 'taobao';
+    if (label === 'bilibili') return p === 'bilibili';
+    return true;
+  }
+
+  function entryToCard(u) {
+    const title = escHtml(u.title || (u.content || '').replace(/<[^>]+>/g,'').slice(0, 60) || '(无标题)');
+    const desc = escHtml((u.content || '').replace(/<[^>]+>/g,'').slice(0, 150));
+    const time = u.published_at ? new Date(u.published_at).toLocaleString('zh-CN') : '';
+    const author = escHtml(u.engagement_metrics?.feed_title || u.engagement_metrics?.nickname || u.engagement_metrics?.author || '');
+    const thumb = u.thumbnail_url || (u.media_urls && u.media_urls[0]) || '';
+    const srcUrl = u.url || u.source_url || '';
+    const typeKey = u.update_type || 'brand_content';
+    const typeLabel = TYPE_LABELS[typeKey] || typeKey;
+    const typeColor = TYPE_COLORS[typeKey] || 'bg-slate-100 text-slate-500';
+    const isBili = u.platform === 'bilibili';
+    const isXHS = u.platform === 'xiaohongshu';
+    const fallbackIcon = isBili
+      ? {icon: 'simple-icons:bilibili', color: 'text-blue-400', bg: 'bg-blue-50'}
+      : isXHS
+      ? {icon: 'mdi:alpha-x-circle', color: 'text-red-500', bg: 'bg-red-50'}
+      : {icon: 'mdi:sina-weibo', color: 'text-rose-400', bg: 'bg-rose-50'};
+    const fb = fallbackIcon;
+    const thumbHtml = thumb
+      ? `<div class="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border border-slate-100"><img src="${escHtml(thumb)}" class="w-full h-full object-cover" onerror="this.parentElement.outerHTML='<div class=\\'flex-shrink-0 w-24 h-24 rounded-lg ${fb.bg} flex items-center justify-center\\'><iconify-icon icon=\\'${fb.icon}\\' class=\\'text-4xl ${fb.color}\\'></iconify-icon></div>'" /></div>`
+      : `<div class="flex-shrink-0 w-24 h-24 rounded-lg ${fb.bg} flex items-center justify-center"><iconify-icon icon="${fb.icon}" class="text-4xl ${fb.color}"></iconify-icon></div>`;
+    return `
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+        <div class="p-6">
+          <div class="flex items-start gap-4">
+            ${thumbHtml}
+            <div class="flex-1">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  <div class="flex items-center gap-2 mb-1">
+                    ${author ? `<span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded">${author}</span>` : ''}
+                    <span class="px-2 py-0.5 ${isXHS ? 'bg-red-50 text-red-600' : isBili ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-500'} text-[10px] font-bold rounded uppercase">${isXHS ? '小红书' : isBili ? 'bilibili' : '微博'}</span>
+                    <span class="px-2 py-0.5 ${typeColor} text-[10px] font-bold rounded">${typeLabel}</span>
+                  </div>
+                  <h3 class="text-lg font-bold text-slate-800">${title}</h3>
+                  ${(u.engagement_metrics?.ai_tags || []).length ? `<div class="flex flex-wrap gap-1 mt-1 mb-1">${(u.engagement_metrics.ai_tags).map(t => `<span class="px-2 py-0.5 bg-violet-50 text-violet-600 text-[10px] font-semibold rounded-full border border-violet-100">#${escHtml(t)}</span>`).join('')}</div>` : ''}
+                </div>
+                <span class="text-sm text-slate-400 font-mono whitespace-nowrap ml-4">${time}</span>
+              </div>
+              <p class="text-slate-600 text-sm mb-4">${desc}</p>
+              <div class="flex items-center gap-6">
+                <div class="ml-auto flex gap-2">
+                  <button class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100">生成对标建议</button>
+                  ${srcUrl ? `<a href="${escHtml(srcUrl)}" target="_blank" rel="noopener" class="px-3 py-1 border border-slate-200 text-slate-600 text-xs font-bold rounded hover:bg-slate-50">查看原文</a>` : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderFeed() {
+    // 显示/隐藏各 tab 区域
+    const feedList = document.getElementById('feedList');
+    const dynamicFeed = document.getElementById('dynamicFeed');
+    const ecomSec = document.getElementById('ecomSection');
+    const socialSec = document.getElementById('socialSection');
+    const priceSec = document.getElementById('priceSection');
+
+    [feedList, dynamicFeed, ecomSec, socialSec, priceSec].forEach(el => {
+      if (!el) return;
+    });
+    feedList.classList.toggle('hidden', activeTab !== 'feed');
+    dynamicFeed.classList.toggle('hidden', activeTab !== 'feed');
+    ecomSec.classList.toggle('hidden', activeTab !== 'ecom');
+    socialSec.classList.toggle('hidden', activeTab !== 'social');
+    priceSec.classList.toggle('hidden', activeTab !== 'price');
+
+    if (activeTab === 'feed') {
+      renderFeedTab();
+    } else if (activeTab === 'ecom') {
+      renderEcomTab();
+    } else if (activeTab === 'social') {
+      renderSocialTab();
+    } else if (activeTab === 'price') {
+      renderPriceTab();
+    }
+  }
+
+  // ── Feed tab ──
+  function renderFeedTab() {
+    const dynamicContainer = document.getElementById('dynamicFeed');
+    const platform = document.getElementById('platformSelect').value;
+    const brand = document.getElementById('brandSelect').value;
+    const type = document.getElementById('typeSelect').value;
+    const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (allEntries.length === 0) {
+      document.querySelectorAll('.mock-card').forEach(el => el.style.display = '');
+      return;
+    }
+    document.querySelectorAll('.mock-card').forEach(el => el.style.display = 'none');
+    const filtered = allEntries.filter(e => {
+      if (!matchPlatform(e.platform, platform)) return false;
+      if (brand) {
+        const raw = e.engagement_metrics?.feed_title || e.engagement_metrics?.nickname || e.engagement_metrics?.author || '';
+        if (extractBrandName(raw) !== brand) return false;
+      }
+      if (type && (e.update_type || 'brand_content') !== type) return false;
+      if (keyword) {
+        const searchText = ((e.title || '') + ' ' + (e.content || '')).toLowerCase();
+        if (!searchText.includes(keyword)) return false;
+      }
+      return true;
+    });
+    filtered.sort((a, b) => {
+      const ta = new Date(a.published_at || 0).getTime();
+      const tb = new Date(b.published_at || 0).getTime();
+      return tb - ta;
+    });
+    if (filtered.length === 0) {
+      dynamicContainer.innerHTML = '<div class="py-16 text-center text-slate-400 text-sm">暂无符合条件的数据</div>';
+    } else {
+      dynamicContainer.innerHTML = filtered.map(entryToCard).join('');
+    }
+  }
+
+  // ── Ecom tab: 品牌×平台矩阵 ──
+  function renderEcomTab() {
+    const el = document.getElementById('ecomContent');
+    if (allEntries.length === 0) {
+      el.innerHTML = '<div class="py-20 text-center"><p class="text-slate-400">暂无数据，请先触发 pipeline 获取数据</p></div>';
+      return;
+    }
+    // 统计每个品牌在每个平台的条目数
+    const platformLabels = { weibo: '微博', xiaohongshu: '小红书', bilibili: 'bilibili', douyin: '抖音', jd: '京东', taobao: '天猫', wechat: '微信' };
+    const brandPlatform = {};
+    allEntries.forEach(e => {
+      const raw = e.engagement_metrics?.feed_title || e.engagement_metrics?.nickname || e.engagement_metrics?.author || '';
+      const brand = extractBrandName(raw) || '(未知品牌)';
+      if (!brandPlatform[brand]) brandPlatform[brand] = {};
+      brandPlatform[brand][e.platform] = (brandPlatform[brand][e.platform] || 0) + 1;
+    });
+    // 收集所有出现的平台
+    const allPlatforms = [...new Set(allEntries.map(e => e.platform))];
+    const brands = Object.keys(brandPlatform).sort();
+    if (brands.length === 0) {
+      el.innerHTML = '<div class="py-20 text-center"><p class="text-slate-400">未识别到品牌数据</p></div>';
+      return;
+    }
+    let html = `
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <h3 class="font-semibold text-slate-900 mb-4">品牌×平台监控矩阵</h3>
+        <p class="text-sm text-slate-500 mb-6">展示各竞品品牌在不同社媒平台的动态数量分布</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="border-b border-slate-100 text-left">
+              <th class="pb-3 font-medium text-slate-500">品牌</th>`;
+    allPlatforms.forEach(p => {
+      html += `<th class="pb-3 font-medium text-slate-500 text-center">${platformLabels[p] || p}</th>`;
+    });
+    html += `<th class="pb-3 font-medium text-slate-500 text-center">合计</th></tr></thead><tbody>`;
+    brands.forEach(brand => {
+      let total = 0;
+      html += `<tr class="border-b border-slate-50"><td class="py-3 font-medium text-slate-800">${escHtml(brand)}</td>`;
+      allPlatforms.forEach(p => {
+        const n = brandPlatform[brand][p] || 0;
+        total += n;
+        html += `<td class="py-3 text-center">${n > 0 ? `<span class="inline-flex items-center justify-center w-8 h-8 rounded-lg ${n >= 10 ? 'bg-indigo-100 text-indigo-700 font-bold' : n >= 3 ? 'bg-slate-100 text-slate-600' : 'bg-slate-50 text-slate-400'} text-sm">${n}</span>` : '<span class="text-slate-300">—</span>'}</td>`;
+      });
+      html += `<td class="py-3 text-center font-semibold text-slate-700">${total}</td></tr>`;
+    });
+    html += '</tbody></table></div></div>';
+    el.innerHTML = html;
+  }
+
+  // ── Social tab: 社媒热榜 ──
+  function renderSocialTab() {
+    const el = document.getElementById('socialContent');
+    if (allEntries.length === 0) {
+      el.innerHTML = '<div class="py-20 text-center"><p class="text-slate-400">暂无数据</p></div>';
+      return;
+    }
+    // 按含图/视频优先排序（有 media 的更可能有互动）
+    const sorted = [...allEntries].sort((a, b) => {
+      const aHasMedia = (a.media_urls && a.media_urls.length > 0) || a.thumbnail_url ? 1 : 0;
+      const bHasMedia = (b.media_urls && b.media_urls.length > 0) || b.thumbnail_url ? 1 : 0;
+      if (bHasMedia !== aHasMedia) return bHasMedia - aHasMedia;
+      const ta = new Date(a.published_at || 0).getTime();
+      const tb = new Date(b.published_at || 0).getTime();
+      return tb - ta;
+    });
+    const platformLabels = { weibo: '微博', xiaohongshu: '小红书', bilibili: 'bilibili' };
+    let html = `
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-slate-900">社媒热榜 <span class="text-sm font-normal text-slate-400">(${sorted.length} 条)</span></h3>
+        </div>
+        <div class="space-y-4">`;
+    sorted.slice(0, 30).forEach((u, i) => {
+      const title = escHtml(u.title || (u.content || '').replace(/<[^>]+>/g, '').slice(0, 50));
+      const desc = escHtml((u.content || '').replace(/<[^>]+>/g, '').slice(0, 80));
+      const time = u.published_at ? new Date(u.published_at).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      const raw = u.engagement_metrics?.feed_title || u.engagement_metrics?.nickname || u.engagement_metrics?.author || '';
+      const brand = escHtml(extractBrandName(raw));
+      const plat = platformLabels[u.platform] || u.platform;
+      const platColor = u.platform === 'xiaohongshu' ? 'bg-red-50 text-red-500' : u.platform === 'bilibili' ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-500';
+      const thumb = u.thumbnail_url || (u.media_urls && u.media_urls[0]) || '';
+      const imgHtml = thumb ? `<img src="${escHtml(thumb)}" class="w-10 h-10 rounded-lg object-cover flex-shrink-0" onerror="this.outerHTML='<div class=\\'w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0\\'>${i + 1}</div>'" />` : `<div class="w-10 h-10 rounded-lg ${i < 3 ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'} flex items-center justify-center text-sm font-bold flex-shrink-0">${i + 1}</div>`;
+      html += `
+        <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+          ${imgHtml}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              ${brand ? `<span class="text-xs text-slate-500 font-medium">${brand}</span>` : ''}
+              <span class="px-1.5 py-0.5 ${platColor} text-[10px] font-bold rounded">${plat}</span>
+            </div>
+            <p class="text-sm font-medium text-slate-800 truncate">${title || desc}</p>
+          </div>
+          <span class="text-xs text-slate-400 whitespace-nowrap flex-shrink-0">${time}</span>
+          ${u.url ? `<a href="${escHtml(u.url)}" target="_blank" rel="noopener" class="text-indigo-500 hover:text-indigo-700 text-xs flex-shrink-0">查看</a>` : ''}
+        </div>`;
+    });
+    html += '</div></div>';
+    el.innerHTML = html;
+  }
+
+  // ── Price tab: 品牌发布节奏时间线 ──
+  function renderPriceTab() {
+    const el = document.getElementById('priceContent');
+    if (allEntries.length === 0) {
+      el.innerHTML = '<div class="py-20 text-center"><p class="text-slate-400">暂无数据</p></div>';
+      return;
+    }
+    // 按品牌分组，每个品牌显示发布时间线
+    const brands = {};
+    allEntries.forEach(e => {
+      const raw = e.engagement_metrics?.feed_title || e.engagement_metrics?.nickname || e.engagement_metrics?.author || '';
+      const name = extractBrandName(raw) || '(未知)';
+      if (!brands[name]) brands[name] = [];
+      brands[name].push(e);
+    });
+    Object.values(brands).forEach(arr => arr.sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0)));
+    const brandNames = Object.keys(brands).sort();
+    // 颜色轮
+    const colors = ['bg-indigo-500', 'bg-rose-500', 'bg-amber-500', 'bg-emerald-500', 'bg-sky-500', 'bg-purple-500', 'bg-teal-500', 'bg-orange-500'];
+
+    let html = `
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+        <h3 class="font-semibold text-slate-900 mb-2">竞品发布节奏</h3>
+        <p class="text-sm text-slate-500 mb-6">按品牌展示最近的动态发布时间分布</p>
+        <div class="space-y-8">`;
+    brandNames.forEach((name, idx) => {
+      const entries = brands[name];
+      const color = colors[idx % colors.length];
+      html += `
+        <div>
+          <div class="flex items-center gap-3 mb-3">
+            <span class="w-3 h-3 rounded-full ${color}"></span>
+            <span class="font-medium text-slate-800">${escHtml(name)}</span>
+            <span class="text-xs text-slate-400">${entries.length} 条动态</span>
+          </div>
+          <div class="flex flex-wrap gap-2 pl-6">`;
+      // 按日期分组显示
+      const byDate = {};
+      entries.forEach(e => {
+        const d = e.published_at ? new Date(e.published_at).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) : '?';
+        if (!byDate[d]) byDate[d] = 0;
+        byDate[d]++;
+      });
+      Object.entries(byDate).forEach(([date, count]) => {
+        html += `<div class="flex items-center gap-1 px-2 py-1 bg-slate-50 rounded-lg text-xs"><span class="text-slate-500">${date}</span><span class="font-semibold text-slate-700">${count}条</span></div>`;
+      });
+      html += '</div></div>';
+    });
+    html += '</div></div>';
+
+    // 添加说明卡片
+    html += `
+      <div class="bg-indigo-50 rounded-xl border border-indigo-100 p-4">
+        <div class="flex items-start gap-3">
+          <iconify-icon icon="mdi:lightbulb-outline" class="text-indigo-500 text-lg mt-0.5"></iconify-icon>
+          <div>
+            <p class="text-sm font-medium text-indigo-900 mb-1">说明</p>
+            <p class="text-xs text-indigo-700">当前数据来源于 Follow（FOLO）订阅数据库。目前以内容发布节奏作为竞品动态监控指标。后续可接入电商平台价格 API，实现真实价格走势追踪。</p>
+          </div>
+        </div>
+      </div>`;
+    el.innerHTML = html;
+  }
+
+  async function loadFeed() {
+    try {
+      const resp = await fetch('/api/data/latest');
+      const data = await resp.json();
+      if (data.has_data) {
+        const updates = (data.data && data.data.OfficialUpdates && data.data.OfficialUpdates.updates) || [];
+        allEntries = updates;
+
+        // 动态填充品牌下拉框（按统一品牌名合并）
+        const brandSet = new Set();
+        updates.forEach(u => {
+          const raw = u.engagement_metrics?.feed_title || u.engagement_metrics?.nickname || u.engagement_metrics?.author || '';
+          const name = extractBrandName(raw);
+          if (name) brandSet.add(name);
+        });
+        const brandSelect = document.getElementById('brandSelect');
+        brandSelect.innerHTML = '<option value="">全部竞品</option>';
+        [...brandSet].sort().forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          brandSelect.appendChild(opt);
+        });
+
+        // 动态填充类型下拉框（只显示数据中实际出现的类型）
+        const typeSet = new Set();
+        updates.forEach(u => typeSet.add(u.update_type || 'brand_content'));
+        const typeSelect = document.getElementById('typeSelect');
+        typeSelect.innerHTML = '<option value="">全部类型</option>';
+        Object.entries(TYPE_LABELS).forEach(([key, label]) => {
+          if (typeSet.has(key)) {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = label;
+            typeSelect.appendChild(opt);
+          }
+        });
+      }
+    } catch(e) { /* 网络失败时保留 mock */ }
+    renderFeed();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('platformSelect').addEventListener('change', renderFeed);
+    document.getElementById('brandSelect').addEventListener('change', renderFeed);
+    document.getElementById('typeSelect').addEventListener('change', renderFeed);
+    document.getElementById('searchInput').addEventListener('input', renderFeed);
+    loadFeed();
+  });
+</script>
+</body>
+</html>

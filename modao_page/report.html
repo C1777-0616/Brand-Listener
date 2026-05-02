@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>报告生成中心 - 竞品监控与品牌文化监听平台</title>
+<script src="https://modao.cc/agent-py/static/source/js/tailwindcss.3.4.3.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900">
+<div class="flex min-h-screen">
+<!-- 侧边栏 (复用) -->
+<aside class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col fixed h-full z-20">
+<div class="p-6 flex items-center gap-3 border-b border-slate-800">
+<iconify-icon class="text-3xl text-indigo-400" icon="mdi:ShieldSearch"></iconify-icon>
+<span class="text-xl font-bold tracking-tight text-white">BrandListen AI</span>
+</div>
+<nav class="flex-1 p-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="index.html">
+<iconify-icon class="text-xl" icon="mdi:view-dashboard"></iconify-icon> 仪表盘首页
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="competitor.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:radar"></iconify-icon> 竞品监听管理
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="culture.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:account-group"></iconify-icon> 品牌文化监听
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="voc.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:comment-quote"></iconify-icon> 用户之声分析
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 bg-indigo-600 rounded-lg text-white font-medium transition-all group" href="report.html">
+<iconify-icon class="text-xl" icon="mdi:file-chart"></iconify-icon> 报告生成中心
+                </a>
+<div class="pt-4 pb-2 text-xs font-semibold text-slate-500 uppercase px-4">系统管理</div>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="settings.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:cog"></iconify-icon> 系统设置
+                </a>
+</nav>
+</aside>
+<main class="flex-1 ml-64 p-8">
+<header class="mb-8">
+<h1 class="text-2xl font-bold text-slate-800">报告生成中心</h1>
+<p class="text-slate-500">一键生成专业、深度的品牌与竞争情报研报，支持多种导出格式。</p>
+</header>
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+<!-- 报告配置区 -->
+<div class="xl:col-span-1 space-y-6">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+<h4 class="font-bold text-slate-800 mb-6">配置报告参数</h4>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-medium text-slate-700 mb-2">报告标题</label>
+<input class="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" type="text" value="2026年4月第1周品牌竞争态势周报"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-sm font-medium text-slate-700 mb-2">报告周期</label>
+<select class="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+<option>周报</option>
+<option>月报</option>
+<option>季度报</option>
+<option>专项研报</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-700 mb-2">包含品牌</label>
+<select class="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+<option>全选</option>
+<option>主品牌 + 竞品A</option>
+<option>自定义</option>
+</select>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-700 mb-2">日期范围</label>
+<div class="flex items-center gap-2">
+<input class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none" type="date" value="2026-04-03"/>
+<span class="text-slate-400">-</span>
+<input class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none" type="date" value="2026-04-10"/>
+</div>
+</div>
+<div class="pt-2">
+<label class="block text-sm font-medium text-slate-700 mb-3">包含模块</label>
+<div class="grid grid-cols-2 gap-3">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input checked="" class="w-4 h-4 text-indigo-600 rounded border-slate-300" type="checkbox"/>
+<span class="text-xs text-slate-600 group-hover:text-indigo-600">仪表盘概览</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input checked="" class="w-4 h-4 text-indigo-600 rounded border-slate-300" type="checkbox"/>
+<span class="text-xs text-slate-600 group-hover:text-indigo-600">竞品调价流</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input checked="" class="w-4 h-4 text-indigo-600 rounded border-slate-300" type="checkbox"/>
+<span class="text-xs text-slate-600 group-hover:text-indigo-600">用户之声深度分析</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input checked="" class="w-4 h-4 text-indigo-600 rounded border-slate-300" type="checkbox"/>
+<span class="text-xs text-slate-600 group-hover:text-indigo-600 font-bold text-indigo-600">企业文化专栏</span>
+</label>
+</div>
+</div>
+</div>
+<div class="mt-8 space-y-3">
+<button class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2">
+<iconify-icon class="text-xl" icon="mdi:file-pdf-box"></iconify-icon> 一键生成 PDF 报告
+                            </button>
+<button class="w-full py-3 bg-white border border-indigo-200 text-indigo-600 rounded-xl font-bold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2">
+<iconify-icon class="text-xl" icon="mdi:microsoft-powerpoint"></iconify-icon> 导出 PPT 演示稿
+                            </button>
+</div>
+</div>
+<div class="bg-indigo-900 rounded-2xl p-6 text-white overflow-hidden relative">
+<iconify-icon class="absolute -right-4 -bottom-4 text-8xl text-white/10" icon="mdi:lightbulb-on"></iconify-icon>
+<h5 class="font-bold mb-2">AI 智能摘要提示</h5>
+<p class="text-xs text-indigo-200 leading-relaxed">基于本周数据，AI检测到竞品A在小红书的声量激增与线下快闪店活动强相关，建议在报告中重点引用“用户之声”模块中关于竞品A服务的负面反馈，以突出我方服务优势。</p>
+</div>
+</div>
+<!-- 报告预览区 -->
+<div class="xl:col-span-2">
+<div class="bg-slate-200 rounded-2xl p-8 min-h-[800px] flex flex-col items-center gap-6 overflow-y-auto max-h-[1000px]">
+<!-- PDF 模拟页面 1: 封面 -->
+<div class="w-[595px] h-[842px] bg-white shadow-2xl flex flex-col p-16 relative flex-shrink-0">
+<div class="flex items-center gap-3 mb-24">
+<iconify-icon class="text-3xl text-indigo-600" icon="mdi:ShieldSearch"></iconify-icon>
+<span class="text-lg font-bold text-slate-800 tracking-wider">BrandListen AI</span>
+</div>
+<div class="flex-1 flex flex-col justify-center">
+<p class="text-indigo-600 font-bold tracking-widest uppercase mb-4">Weekly Analysis Report</p>
+<h1 class="text-4xl font-black text-slate-900 leading-tight mb-8">2026年4月第1周<br/>品牌竞争态势与文化监听周报</h1>
+<div class="w-20 h-2 bg-indigo-600 mb-12"></div>
+<div class="space-y-2 text-slate-500">
+<p class="flex items-center gap-2"><span class="font-bold text-slate-700">生成时间:</span> 2026年04月10日</p>
+<p class="flex items-center gap-2"><span class="font-bold text-slate-700">分析周期:</span> 04/03 - 04/10</p>
+<p class="flex items-center gap-2"><span class="font-bold text-slate-700">分析师:</span> BrandListen 自动化分析引擎</p>
+</div>
+</div>
+<div class="text-[10px] text-slate-300 border-t border-slate-100 pt-4 flex justify-between">
+<span>CONFIDENTIAL - INTERNAL USE ONLY</span>
+<span>PAGE 01</span>
+</div>
+</div>
+<!-- PDF 模拟页面 2: 文化专栏 -->
+<div class="w-[595px] h-[842px] bg-white shadow-2xl flex flex-col p-12 relative flex-shrink-0">
+<div class="flex justify-between items-center mb-8 border-b border-slate-100 pb-4">
+<h2 class="text-xl font-bold text-slate-800">Section 03: 企业文化与价值专栏</h2>
+<span class="text-xs text-slate-400">BrandListen AI 分析研报</span>
+</div>
+<div class="space-y-8">
+<div class="bg-indigo-50 p-6 rounded-xl">
+<h3 class="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2">
+<iconify-icon icon="mdi:heart-flash"></iconify-icon> 本周文化健康度摘要
+                                    </h3>
+<p class="text-sm text-indigo-800/80 leading-relaxed">
+                                        本周品牌文化指数为 85 分，较上周持平。重点文化活动“Q2季度价值观共创营”覆盖了全公司 90% 以上的核心管理岗位，产出了关于“高效协作”的 5 项核心标准。外部声量方面，创始人王志强的演讲被超过 30 家垂直媒体引用，有效强化了品牌在 AI 行业的“技术人性化”定位。
+                                    </p>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<div class="border border-slate-100 rounded-xl p-4">
+<h4 class="text-sm font-bold text-slate-800 mb-3 underline decoration-indigo-200 decoration-4">核心活动回顾</h4>
+<ul class="space-y-3">
+<li class="flex gap-2">
+<span class="w-1 h-1 rounded-full bg-indigo-600 mt-1.5"></span>
+<p class="text-xs text-slate-600">4月6日: 价值观共创营启动，确立 Q2 文化主基调。</p>
+</li>
+<li class="flex gap-2">
+<span class="w-1 h-1 rounded-full bg-indigo-600 mt-1.5"></span>
+<p class="text-xs text-slate-600">4月8日: 员工周年礼活动，员工满意度 4.8 分。</p>
+</li>
+</ul>
+</div>
+<div class="border border-slate-100 rounded-xl p-4">
+<h4 class="text-sm font-bold text-slate-800 mb-3 underline decoration-indigo-200 decoration-4">创始人语录精选</h4>
+<p class="text-xs text-slate-600 italic leading-relaxed">“品牌不仅是产品的外壳，更是企业价值观的载体。我们在打磨技术的同时，更在通过每一次服务输出我们的文化。”</p>
+</div>
+</div>
+<div class="space-y-4">
+<h4 class="text-sm font-bold text-slate-800">文化价值与市场反馈关联分析</h4>
+<div class="bg-slate-50 h-40 rounded-xl flex items-center justify-center border border-dashed border-slate-200">
+<span class="text-slate-400 text-xs text-center">[ 这里是自动生成的趋势对比图：<br/>文化活动频次 vs 品牌正面情感提及 ]</span>
+</div>
+</div>
+</div>
+<div class="mt-auto text-[10px] text-slate-300 border-t border-slate-100 pt-4 flex justify-between">
+<span>BRAND CULTURE LISTENING MODULE</span>
+<span>PAGE 03</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,28 @@
+name: LangGraphBrandListenerMVP
+version: 0.1
+purpose: 架构骨架与接口契约示意（不含实现细节）
+groups:
+  - id: searcher
+    name: 搜索者
+    agents:
+      - BrandCultureListeningAgent
+      - OfficialUpdatesAgent
+      - SocialMediaFeedbackAgent
+      - ShoppingPlatformFeedbackAgent
+  - id: analyst
+    name: 分析师
+    agents:
+      - OtherBrandCampaignAnalystAgent
+      - UserFeedbackAnalystAgent
+  - id: reporter
+    name: 报告员
+    agents:
+      - TemplateDrivenReportAgent
+  - id: supervisor
+    name: 主管
+    agents:
+      - TaskDispatcherAgent
+
+notes: |
+  这是一个纯骨架的 LangGraph 结构示例，用于在前端逐步实现代理对接时，规范输入输出契约、数据流和职责边界。
+  具体字段将在后续阶段逐步细化为正式的接口定义（如 JSON Schema / OpenAPI 风格）。

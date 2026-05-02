@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>微博监听 - Brand Listener</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+  <script src="https://modao.cc/agent-py/static/source/js/echarts.min.5.4.3.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900 antialiased">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-slate-900 text-white fixed h-full z-20 flex flex-col">
+    <div class="p-5 border-b border-slate-800"><div class="flex items-center gap-2"><iconify-icon icon="mdi:ShieldSearch" class="text-2xl text-indigo-400"></iconify-icon><span class="font-bold text-base">BrandListen AI</span></div></div>
+    <nav class="flex-1 p-3 space-y-1 text-sm">
+      <a href="/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:view-dashboard"></iconify-icon>仪表盘首页</a>
+      <a href="/competitor" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:radar"></iconify-icon>竞品监听管理</a>
+      <a href="/culture" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:account-group"></iconify-icon>品牌文化监听</a>
+      <a href="/voc" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:comment-quote"></iconify-icon>用户之声分析</a>
+      <a href="/report" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:file-chart"></iconify-icon>报告生成中心</a>
+      <a href="/weibo" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-600 text-white font-medium transition"><iconify-icon icon="mdi:sina-weibo"></iconify-icon>微博监听</a>
+      <div class="pt-4 pb-1 px-3 text-xs text-slate-600 uppercase tracking-wider">系统管理</div>
+      <a href="/settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:cog"></iconify-icon>系统设置</a>
+    </nav>
+  </aside>
+  <!-- Main -->
+  <div class="ml-64 p-8">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <iconify-icon icon="mdi:sina-weibo" class="text-2xl text-red-500"></iconify-icon>微博监听
+        </h1>
+        <p class="text-sm text-slate-500 mt-1">
+          实时追踪固定品牌微博更新动态
+          <span id="lastRunBadge" class="ml-2 hidden text-xs text-slate-400">
+            · 上次更新：<span id="lastRunTime">—</span>
+            <span id="pipelineSpinner" class="hidden ml-1 inline-flex items-center gap-0.5 text-indigo-500">
+              <iconify-icon icon="mdi:loading" class="animate-spin text-xs"></iconify-icon>处理中
+            </span>
+          </span>
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <select id="brandFilter" class="border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+          <option value="all">全部品牌</option>
+        </select>
+        <select id="timeFilter" class="border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+          <option value="24h">最近 24 小时</option>
+          <option value="7d">最近 7 天</option>
+          <option value="30d">最近 30 天</option>
+          <option value="all">全部时间</option>
+        </select>
+        <button id="uploadBtn" class="flex items-center gap-1.5 text-sm border border-slate-200 bg-white px-4 py-2 rounded-lg hover:bg-slate-50 transition">
+          <iconify-icon icon="mdi:upload"></iconify-icon>上传导出
+        </button>
+        <button id="runBtn" class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-md text-sm font-medium transition">
+          <iconify-icon icon="mdi:refresh"></iconify-icon>刷新
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" id="statsRow">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center"><iconify-icon icon="mdi:post" class="text-red-500 text-lg"></iconify-icon></div>
+        <div><p class="text-xs text-slate-400">微博更新数</p><p id="stat-total" class="text-xl font-bold text-slate-900">—</p></div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center"><iconify-icon icon="mdi:account-multiple" class="text-blue-500 text-lg"></iconify-icon></div>
+        <div><p class="text-xs text-slate-400">监控品牌数</p><p id="stat-brands" class="text-xl font-bold text-slate-900">—</p></div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center"><iconify-icon icon="mdi:thumb-up" class="text-green-500 text-lg"></iconify-icon></div>
+        <div><p class="text-xs text-slate-400">总互动 (转评赞)</p><p id="stat-engagement" class="text-xl font-bold text-slate-900">—</p></div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center"><iconify-icon icon="mdi:update" class="text-amber-500 text-lg"></iconify-icon></div>
+        <div><p class="text-xs text-slate-400">最新更新</p><p id="stat-latest" class="text-sm font-medium text-slate-900">—</p></div>
+      </div>
+    </div>
+
+    <!-- Upload area (hidden by default) -->
+    <div id="uploadArea" class="hidden mb-6 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+      <h3 class="font-semibold text-slate-900 mb-3">上传 Follow 数据库文件</h3>
+      <div class="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-indigo-300 transition cursor-pointer" id="dropZone">
+        <iconify-icon icon="mdi:cloud-upload" class="text-4xl text-slate-300 mb-2 block"></iconify-icon>
+        <p class="text-sm text-slate-500">拖拽 <strong>follow.db</strong>（或 JSON/CSV）到此处，或点击选择文件</p>
+        <p class="text-xs text-slate-400 mt-1">文件位置通常在 <code class="bg-slate-100 px-1 rounded">C:\Users\[用户名]\AppData\Roaming\Follow\follow.db</code></p>
+        <input type="file" id="fileInput" accept=".db,.json,.csv" class="hidden" />
+        <button id="selectFileBtn" class="mt-3 text-sm text-indigo-600 hover:text-indigo-700 font-medium">选择文件</button>
+      </div>
+      <div id="uploadStatus" class="mt-3 text-sm text-slate-400 hidden"></div>
+    </div>
+
+    <!-- Main content: two column layout -->
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+      <!-- Left: brand list -->
+      <div class="xl:col-span-1">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+          <h3 class="font-semibold text-slate-900 text-sm mb-3">监控品牌</h3>
+          <div id="brandSideList" class="space-y-1 text-sm">
+            <div class="text-slate-400 text-xs">加载中...</div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-100">
+            <a href="/settings" class="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
+              <iconify-icon icon="mdi:cog"></iconify-icon>管理品牌配置
+            </a>
+          </div>
+        </div>
+      </div>
+      <!-- Right: feed -->
+      <div class="xl:col-span-3">
+        <div id="feedContainer" class="space-y-4">
+          <!-- Feed will be rendered here -->
+          <div class="text-sm text-slate-400 text-center py-12">
+            <iconify-icon icon="mdi:sina-weibo" class="text-4xl text-slate-200 mb-2 block"></iconify-icon>
+            暂无微博更新 — 请先上传 FOLO 导出文件或运行流水线
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/api.js"></script>
+  <script>
+    let currentBrand = 'all';
+    let currentTime = '24h';
+
+    async function render() {
+      const data = await fetchPipelineData();
+      const ofu = data.OfficialUpdates || {};
+      const allUpdates = ofu.updates || [];
+
+      // Filter to weibo platform only
+      let weiboItems = allUpdates.filter(u => u.platform === 'weibo');
+
+      // Apply brand filter
+      if (currentBrand !== 'all') {
+        weiboItems = weiboItems.filter(u => u.source_url === currentBrand);
+      }
+
+      // Apply time filter
+      const now = Date.now();
+      if (currentTime === '24h') {
+        weiboItems = weiboItems.filter(u => now - new Date(u.published_at).getTime() < 86400000);
+      } else if (currentTime === '7d') {
+        weiboItems = weiboItems.filter(u => now - new Date(u.published_at).getTime() < 604800000);
+      } else if (currentTime === '30d') {
+        weiboItems = weiboItems.filter(u => now - new Date(u.published_at).getTime() < 2592000000);
+      }
+
+      // Sort by published_at descending
+      weiboItems.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+
+      // Render stats
+      const totalEngagement = weiboItems.reduce((sum, u) => {
+        const m = u.engagement_metrics || {};
+        return sum + (m.likes || 0) + (m.comments || 0) + (m.shares || 0);
+      }, 0);
+      const uniqueBrands = new Set(weiboItems.map(u => u.source_url));
+      document.getElementById('stat-total').textContent = weiboItems.length;
+      document.getElementById('stat-brands').textContent = uniqueBrands.size;
+      document.getElementById('stat-engagement').textContent = totalEngagement.toLocaleString();
+      document.getElementById('stat-latest').textContent = weiboItems.length > 0 ? formatTime(weiboItems[0].published_at) : '—';
+
+      // Build brand map for lookups
+      const brandMap = {};
+      try {
+        const brandsResp = await fetch('/api/brands');
+        const brandsData = await brandsResp.json();
+        (brandsData.brands || []).forEach(b => { brandMap[b.weibo_url] = b.name; });
+      } catch (e) {
+        // Fallback: use last segment of url
+      }
+
+      // Update brand filter dropdown
+      const brandFilter = document.getElementById('brandFilter');
+      const currentVal = brandFilter.value;
+      const brandUrls = [...new Set(allUpdates.filter(u => u.platform === 'weibo').map(u => u.source_url))];
+      // Also add from configured brands
+      try {
+        const brResp = await fetch('/api/brands');
+        const brData = await brResp.json();
+        (brData.brands || []).forEach(b => {
+          if (!brandUrls.includes(b.weibo_url)) brandUrls.push(b.weibo_url);
+        });
+      } catch (e) {}
+      brandFilter.innerHTML = '<option value="all">全部品牌</option>' +
+        brandUrls.map(url => `<option value="${url}">${brandMap[url] || url.split('/').pop() || url}</option>`).join('');
+      brandFilter.value = currentVal !== 'all' && brandUrls.includes(currentVal) ? currentVal : 'all';
+
+      // Brand side list
+      document.getElementById('brandSideList').innerHTML = brandUrls.map(url => {
+        const name = brandMap[url] || url.split('/').pop() || url;
+        const count = allUpdates.filter(u => u.source_url === url).length;
+        const active = url === currentBrand || (currentBrand === 'all' && false);
+        return `<div class="flex items-center justify-between px-3 py-2 rounded-lg ${active ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-slate-50 cursor-pointer'} brand-item" data-url="${url}">
+          <span class="font-medium text-sm">${escapeHtml(name)}</span>
+          <span class="text-xs text-slate-400">${count}</span>
+        </div>`;
+      }).join('') || '<div class="text-xs text-slate-400 text-center py-4">暂无品牌</div>';
+
+      // Attach click handlers
+      document.querySelectorAll('.brand-item').forEach(el => {
+        el.addEventListener('click', () => {
+          currentBrand = el.dataset.url;
+          render();
+        });
+      });
+
+      // Render feed
+      const feedEl = document.getElementById('feedContainer');
+      if (weiboItems.length === 0) {
+        feedEl.innerHTML = '<div class="text-sm text-slate-400 text-center py-12"><iconify-icon icon="mdi:weibo" class="text-4xl text-slate-200 mb-2 block"></iconify-icon>暂无符合条件的微博更新</div>';
+        return;
+      }
+
+      feedEl.innerHTML = weiboItems.map(item => {
+        const brandName = brandMap[item.source_url] || item.source_url.split('/').pop() || '未知品牌';
+        const metrics = item.engagement_metrics || {};
+        const hasMedia = item.media_urls && item.media_urls.length > 0;
+        const sentLabels = { positive: 'text-green-600 bg-green-50', neutral: 'text-slate-600 bg-slate-50', negative: 'text-rose-600 bg-rose-50' };
+        const sentLabel = sentLabels[item.sentiment] || sentLabels.neutral;
+        const sentText = item.sentiment || 'neutral';
+
+        // Truncate long content
+        const contentFull = item.content || '';
+        const contentShort = contentFull.length > 200 ? contentFull.substring(0, 200) + '...' : contentFull;
+
+        return `<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow">
+          <div class="flex gap-4">
+            <!-- Avatar -->
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+              <span class="text-lg font-bold text-red-600">${brandName.charAt(0)}</span>
+            </div>
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+              <!-- Header -->
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-medium text-slate-900 text-sm">${escapeHtml(brandName)}</span>
+                <span class="text-xs bg-red-50 text-red-500 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                  <iconify-icon icon="mdi:sina-weibo" class="text-xs"></iconify-icon>微博
+                </span>
+                <span class="text-xs text-slate-400">${formatTime(item.published_at)}</span>
+              </div>
+              <!-- Title -->
+              ${item.title ? `<h4 class="font-medium text-slate-900 mb-1">${escapeHtml(item.title)}</h4>` : ''}
+              <!-- Body -->
+              <div class="text-sm text-slate-700 leading-relaxed mb-2">
+                <span class="content-text">${escapeHtml(contentShort)}</span>
+                ${contentFull.length > 200 ? `<button class="text-indigo-500 hover:text-indigo-700 text-xs ml-1 expand-btn">展开全文</button>` : ''}
+              </div>
+              <!-- Media thumbnails -->
+              ${hasMedia ? `<div class="flex gap-2 mb-2 overflow-x-auto">${item.media_urls.slice(0, 4).map((url, i) =>
+                `<div class="w-20 h-20 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200 overflow-hidden">
+                  <iconify-icon icon="mdi:image" class="text-slate-300 text-2xl"></iconify-icon>
+                </div>`
+              ).join('')}${item.media_urls.length > 4 ? `<div class="w-20 h-20 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 text-xs text-slate-400">+${item.media_urls.length - 4}</div>` : ''}</div>` : ''}
+              <!-- Engagement metrics -->
+              <div class="flex flex-wrap gap-4 text-xs text-slate-400 mt-2">
+                <span class="flex items-center gap-1"><iconify-icon icon="mdi:repeat"></iconify-icon>${(metrics.shares || 0).toLocaleString()}</span>
+                <span class="flex items-center gap-1"><iconify-icon icon="mdi:comment-text-outline"></iconify-icon>${(metrics.comments || 0).toLocaleString()}</span>
+                <span class="flex items-center gap-1"><iconify-icon icon="mdi:thumb-up-outline"></iconify-icon>${(metrics.likes || 0).toLocaleString()}</span>
+                <span class="${sentLabel} px-1.5 py-0.5 rounded text-xs">${sentText === 'positive' ? '正面' : sentText === 'negative' ? '负面' : '中性'}</span>
+              </div>
+              <!-- Original link -->
+              ${item.url ? `<div class="mt-2"><a href="${escapeHtml(item.url)}" target="_blank" class="text-xs text-indigo-500 hover:text-indigo-700 flex items-center gap-1"><iconify-icon icon="mdi:open-in-new"></iconify-icon>查看原文</a></div>` : ''}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      // Attach expand handlers
+      document.querySelectorAll('.expand-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const container = this.parentElement;
+          const textSpan = container.querySelector('.content-text');
+          // We need the full content - find the original item
+          // Simple approach: remove the ... and button
+          textSpan.textContent = textSpan.textContent.replace('...', '');
+          this.remove();
+        });
+      });
+    }
+
+    async function loadBrandsForFilter() {
+      try {
+        const resp = await fetch('/api/brands');
+        const data = await resp.json();
+        const sel = document.getElementById('brandFilter');
+        (data.brands || []).forEach(b => {
+          if (![...sel.options].some(o => o.value === b.weibo_url)) {
+            sel.add(new Option(b.name, b.weibo_url));
+          }
+        });
+      } catch (e) {}
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      render();
+      startStatusPolling();
+
+      // Brand filter change
+      document.getElementById('brandFilter')?.addEventListener('change', (e) => {
+        currentBrand = e.target.value;
+        render();
+      });
+
+      // Time filter change
+      document.getElementById('timeFilter')?.addEventListener('change', (e) => {
+        currentTime = e.target.value;
+        render();
+      });
+
+      // Refresh / Run pipeline
+      document.getElementById('runBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('runBtn');
+        btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> 运行中...';
+        try {
+          await runPipeline();
+          await render();
+          btn.innerHTML = '<iconify-icon icon="mdi:check-circle"></iconify-icon> 已刷新';
+          setTimeout(() => { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:refresh"></iconify-icon> 刷新'; }, 1500);
+        } catch (e) {
+          btn.innerHTML = '失败';
+          btn.disabled = false;
+        }
+      });
+
+      // Upload toggle
+      document.getElementById('uploadBtn')?.addEventListener('click', () => {
+        const area = document.getElementById('uploadArea');
+        area.classList.toggle('hidden');
+      });
+
+      // Upload file handling
+      const dropZone = document.getElementById('dropZone');
+      const fileInput = document.getElementById('fileInput');
+      document.getElementById('selectFileBtn')?.addEventListener('click', () => fileInput.click());
+
+      dropZone?.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-400'); });
+      dropZone?.addEventListener('dragleave', () => dropZone.classList.remove('border-indigo-400'));
+      dropZone?.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-indigo-400');
+        if (e.dataTransfer.files.length > 0) uploadFile(e.dataTransfer.files[0]);
+      });
+      fileInput?.addEventListener('change', () => {
+        if (fileInput.files.length > 0) uploadFile(fileInput.files[0]);
+      });
+
+      async function uploadFile(file) {
+        const status = document.getElementById('uploadStatus');
+        status.className = 'mt-3 text-sm text-slate-500';
+        status.textContent = `正在上传 ${file.name}...`;
+        status.classList.remove('hidden');
+        try {
+          await uploadExport(file);
+          // Pipeline is auto-triggered by upload endpoint; just wait and refresh
+          status.textContent = `✅ ${file.name} 上传成功，数据处理中，稍后自动刷新...`;
+          document.getElementById('uploadArea').classList.add('hidden');
+          setTimeout(() => render(), 3000);
+        } catch (e) {
+          status.textContent = `❌ 上传失败: ${e.message}`;
+          status.className = 'mt-3 text-sm text-rose-600';
+        }
+      }
+    });
+
+    // ── 30s 轮询：检测 pipeline 状态变化并自动刷新 ──
+    let _lastRunAt = null;
+
+    function _formatRelativeTime(isoStr) {
+      if (!isoStr) return '—';
+      const diff = Math.floor((Date.now() - new Date(isoStr).getTime()) / 1000);
+      if (diff < 60) return `${diff} 秒前`;
+      if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
+      return `${Math.floor(diff / 3600)} 小时前`;
+    }
+
+    async function startStatusPolling() {
+      async function tick() {
+        try {
+          const s = await fetch('/api/pipeline/status').then(r => r.json());
+
+          // Update last-run badge
+          const badge = document.getElementById('lastRunBadge');
+          const timeEl = document.getElementById('lastRunTime');
+          const spinner = document.getElementById('pipelineSpinner');
+          if (s.last_run_at || s.running) {
+            badge?.classList.remove('hidden');
+          }
+          if (timeEl && s.last_run_at) {
+            timeEl.textContent = _formatRelativeTime(s.last_run_at);
+          }
+          if (spinner) {
+            s.running ? spinner.classList.remove('hidden') : spinner.classList.add('hidden');
+          }
+
+          // Re-render feed if new data arrived
+          if (s.last_run_at && s.last_run_at !== _lastRunAt) {
+            _lastRunAt = s.last_run_at;
+            await render();
+          }
+        } catch (e) {
+          // Silently ignore network errors during polling
+        }
+      }
+
+      await tick();
+      setInterval(tick, 30000);
+    }
+  </script>
+</body>
+</html>

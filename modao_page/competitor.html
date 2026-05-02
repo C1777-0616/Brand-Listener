@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>竞品监听管理 - 竞品监控与品牌文化监听平台</title>
+<script src="https://modao.cc/agent-py/static/source/js/tailwindcss.3.4.3.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900">
+<div class="flex min-h-screen">
+<!-- 侧边栏 (复用首页结构) -->
+<aside class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col fixed h-full z-20">
+<div class="p-6 flex items-center gap-3 border-b border-slate-800">
+<iconify-icon class="text-3xl text-indigo-400" icon="mdi:ShieldSearch"></iconify-icon>
+<span class="text-xl font-bold tracking-tight text-white">BrandListen AI</span>
+</div>
+<nav class="flex-1 p-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="index.html">
+<iconify-icon class="text-xl" icon="mdi:view-dashboard"></iconify-icon> 仪表盘首页
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 bg-indigo-600 rounded-lg text-white font-medium transition-all group" href="competitor.html">
+<iconify-icon class="text-xl" icon="mdi:radar"></iconify-icon> 竞品监听管理
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="culture.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:account-group"></iconify-icon> 品牌文化监听
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="voc.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:comment-quote"></iconify-icon> 用户之声分析
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="report.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:file-chart"></iconify-icon> 报告生成中心
+                </a>
+<div class="pt-4 pb-2 text-xs font-semibold text-slate-500 uppercase px-4">系统管理</div>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="settings.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:cog"></iconify-icon> 系统设置
+                </a>
+</nav>
+</aside>
+<main class="flex-1 ml-64 p-8">
+<header class="flex justify-between items-center mb-8">
+<div>
+<h1 class="text-2xl font-bold text-slate-800">竞品监听管理</h1>
+<p class="text-slate-500">配置全网监控规则，实时捕获竞争对手的每一个动作。</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2">
+<iconify-icon icon="mdi:export"></iconify-icon> 导出分析
+                    </button>
+<button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all flex items-center gap-2">
+<iconify-icon icon="mdi:cog-transfer"></iconify-icon> 批量同步配置
+                    </button>
+</div>
+</header>
+<!-- 选项卡导航 -->
+<div class="flex border-b border-slate-200 mb-8 overflow-x-auto">
+<button class="px-6 py-3 border-b-2 border-indigo-600 text-indigo-600 font-bold whitespace-nowrap">全网动态流</button>
+<button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap">电商平台配置</button>
+<button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap">社交媒体配置</button>
+<button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap">价格走势监控</button>
+</div>
+<!-- 过滤器 -->
+<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-8 flex flex-wrap gap-4 items-center">
+<div class="flex items-center gap-2">
+<span class="text-sm text-slate-500">平台:</span>
+<select class="text-sm border-slate-200 rounded-lg bg-slate-50 px-3 py-1.5 outline-none">
+<option>全部平台</option>
+<option>天猫/淘宝</option>
+<option>京东</option>
+<option>小红书</option>
+<option>抖音</option>
+</select>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-slate-500">品牌:</span>
+<select class="text-sm border-slate-200 rounded-lg bg-slate-50 px-3 py-1.5 outline-none">
+<option>全部竞品</option>
+<option>竞品A (高端线)</option>
+<option>竞品B (大众线)</option>
+</select>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-slate-500">类型:</span>
+<select class="text-sm border-slate-200 rounded-lg bg-slate-50 px-3 py-1.5 outline-none">
+<option>全部类型</option>
+<option>新品发布</option>
+<option>价格调整</option>
+<option>促销活动</option>
+<option>代言人变动</option>
+</select>
+</div>
+<div class="ml-auto relative">
+<input class="pl-10 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-64" placeholder="搜索关键词..." type="text"/>
+<iconify-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" icon="mdi:magnify"></iconify-icon>
+</div>
+</div>
+<!-- 监听流列表 -->
+<div class="space-y-6">
+<!-- 动态项 1 -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+<div class="p-6">
+<div class="flex items-start gap-4">
+<div class="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border border-slate-100">
+<img alt="Product" class="w-full h-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/7875ad7b03ed4edbb4bbc3bf883eaf1a.jpg"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-2">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 bg-rose-100 text-rose-600 text-[10px] font-bold rounded uppercase">价格调整</span>
+<span class="px-2 py-0.5 bg-blue-100 text-blue-600 text-[10px] font-bold rounded uppercase">京东</span>
+</div>
+<h3 class="text-lg font-bold text-slate-800">竞品A 旗舰店核心SKU价格跳水</h3>
+</div>
+<span class="text-sm text-slate-400 font-mono">2026-04-10 10:24</span>
+</div>
+<p class="text-slate-600 text-sm mb-4">监测到竞品A旗舰店将其主力机型[AirX 2026]从原价 ¥2,999 调整为 ¥2,399，降幅达20%。初步判断为应对我方即将开启的春季促销。</p>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-1 text-slate-500 text-xs">
+<iconify-icon icon="mdi:eye"></iconify-icon> 1,280 曝光
+                                    </div>
+<div class="flex items-center gap-1 text-slate-500 text-xs">
+<iconify-icon icon="mdi:cart"></iconify-icon> 预计转化率 +15%
+                                    </div>
+<div class="ml-auto flex gap-2">
+<button class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100">生成对标建议</button>
+<button class="px-3 py-1 border border-slate-200 text-slate-600 text-xs font-bold rounded hover:bg-slate-50">标记已处理</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 动态项 2 -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+<div class="p-6">
+<div class="flex items-start gap-4">
+<div class="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-indigo-50 flex items-center justify-center">
+<iconify-icon class="text-4xl text-indigo-400" icon="mdi:bullhorn-outline"></iconify-icon>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-2">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 bg-green-100 text-green-600 text-[10px] font-bold rounded uppercase">营销活动</span>
+<span class="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded uppercase">小红书</span>
+</div>
+<h3 class="text-lg font-bold text-slate-800">竞品B 联名快闪店线下预热</h3>
+</div>
+<span class="text-sm text-slate-400 font-mono">2026-04-10 09:15</span>
+</div>
+<p class="text-slate-600 text-sm mb-4">通过小红书多位头部KOL发布的笔记发现，竞品B计划于4月15日在上海静安区开设为期7天的[城市丛林]联名快闪店。目前社媒声量正处于上升期，预计辐射人数超过500万。</p>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-1 text-slate-500 text-xs">
+<iconify-icon icon="mdi:heart"></iconify-icon> 52.4k 点赞
+                                    </div>
+<div class="flex items-center gap-1 text-slate-500 text-xs">
+<iconify-icon icon="mdi:share-variant"></iconify-icon> 8.2k 转发
+                                    </div>
+<div class="ml-auto flex gap-2">
+<button class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100">查看KOL清单</button>
+<button class="px-3 py-1 border border-slate-200 text-slate-600 text-xs font-bold rounded hover:bg-slate-50">加入周报</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 动态项 3 (新品发布) -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+<div class="p-6 border-l-4 border-indigo-600">
+<div class="flex items-start gap-4">
+<div class="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border border-slate-100">
+<img alt="New Launch" class="w-full h-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/8cddcd560fbc403bbc8b3b8b6f24f032.jpg"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-2">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 bg-indigo-600 text-white text-[10px] font-bold rounded uppercase">重大新品发布</span>
+<span class="px-2 py-0.5 bg-slate-800 text-white text-[10px] font-bold rounded uppercase">多平台同步</span>
+</div>
+<h3 class="text-lg font-bold text-slate-800">竞品C 全球首发AI智能家居中控</h3>
+</div>
+<span class="text-sm text-slate-400 font-mono">2026-04-09 20:00</span>
+</div>
+<p class="text-slate-600 text-sm mb-4">竞品C正式发布其旗舰级AI中控系统。该产品采用了最新的[大模型内核]，支持多模态交互。天猫预售开启1小时内，订单量已突破5,000台。对我方核心产品[智能家庭管家]构成直接威胁。</p>
+<div class="flex items-center gap-4">
+<div class="flex -space-x-2">
+<img alt="U1" class="w-6 h-6 rounded-full border-2 border-white" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/c669ae459d7d4c17bf6d596f511a1d4b.jpg"/>
+<img alt="U2" class="w-6 h-6 rounded-full border-2 border-white" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/79f1cb0abf3c452d8200b28d61cb1a9b.jpg"/>
+<img alt="U3" class="w-6 h-6 rounded-full border-2 border-white" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/a18ea31332c448baa08cabe0f28a15ef.jpg"/>
+<div class="w-6 h-6 rounded-full bg-slate-100 border-2 border-white text-[8px] flex items-center justify-center font-bold text-slate-500">+12</div>
+</div>
+<span class="text-xs text-slate-400">已有15位分析师对此动态标注“高关注”</span>
+<div class="ml-auto flex gap-2">
+<button class="px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded hover:bg-indigo-700">启动竞品拆解分析</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 加载更多 -->
+<div class="mt-8 text-center">
+<button class="px-6 py-2 bg-white border border-slate-200 rounded-full text-sm text-slate-600 hover:bg-slate-50 transition-all">加载更多历史动态...</button>
+</div>
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,4 @@
+name: OtherBrandCampaignAnalystAgent
+type: agent
+inputs: [CompetitionData, BrandCultureEvent, SocialMediaFeedback]
+outputs: [CompetitorCampaignAnalysis]

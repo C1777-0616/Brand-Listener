@@ -1,0 +1,4 @@
+name: BrandCultureListeningAgent
+type: agent
+inputs: [brandId, sources, frequency]
+outputs: [BrandCultureEvent, CultureSummary]

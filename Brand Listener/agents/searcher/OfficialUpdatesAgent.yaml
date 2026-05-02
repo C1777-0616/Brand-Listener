@@ -1,0 +1,21 @@
+name: OfficialUpdatesAgent
+type: agent
+description: |
+  Orchestrator that collects official brand account updates from multiple platform
+  sub-agents and merges them into a single OfficialUpdates output for downstream analysis.
+  Sub-agents are instantiated internally; LangGraph sees only this node.
+inputs: [sources]
+outputs: [OfficialUpdates]
+module: src.agents.searcher.official_updates_agent
+factory: create_official_updates_agent
+sub_agents:
+  - WeiboUpdatesAgent
+  - XiaohongshuUpdatesAgent
+config:
+  max_sources: 50
+  lookback_hours: 24
+  folo_config:
+    exporter_type: "file"
+    export_path: "./data/exports"
+    file_pattern: "*.db"
+    lookback_hours: 24

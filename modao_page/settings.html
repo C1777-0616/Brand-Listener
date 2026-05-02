@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>系统设置 - 竞品监控与品牌文化监听平台</title>
+<script src="https://modao.cc/agent-py/static/source/js/tailwindcss.3.4.3.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900">
+<div class="flex min-h-screen">
+<!-- 侧边栏 (复用) -->
+<aside class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col fixed h-full z-20">
+<div class="p-6 flex items-center gap-3 border-b border-slate-800">
+<iconify-icon class="text-3xl text-indigo-400" icon="mdi:ShieldSearch"></iconify-icon>
+<span class="text-xl font-bold tracking-tight text-white">BrandListen AI</span>
+</div>
+<nav class="flex-1 p-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="index.html">
+<iconify-icon class="text-xl" icon="mdi:view-dashboard"></iconify-icon> 仪表盘首页
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="competitor.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:radar"></iconify-icon> 竞品监听管理
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="culture.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:account-group"></iconify-icon> 品牌文化监听
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="voc.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:comment-quote"></iconify-icon> 用户之声分析
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="report.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:file-chart"></iconify-icon> 报告生成中心
+                </a>
+<div class="pt-4 pb-2 text-xs font-semibold text-slate-500 uppercase px-4">系统管理</div>
+<a class="flex items-center gap-3 px-4 py-3 bg-indigo-600 rounded-lg text-white font-medium transition-all group" href="settings.html">
+<iconify-icon class="text-xl" icon="mdi:cog"></iconify-icon> 系统设置
+                </a>
+</nav>
+</aside>
+<main class="flex-1 ml-64 p-8">
+<header class="mb-8">
+<h1 class="text-2xl font-bold text-slate-800">系统设置</h1>
+<p class="text-slate-500">管理监控对象、数据源接入状态以及团队协作权限。</p>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+<!-- 左侧：设置分类导航 -->
+<div class="lg:col-span-1">
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+<div class="p-4 bg-slate-50 border-b border-slate-100">
+<span class="text-xs font-bold text-slate-400 uppercase">分类选择</span>
+</div>
+<nav class="p-2 space-y-1">
+<button class="w-full flex items-center gap-3 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg font-bold text-sm text-left">
+<iconify-icon icon="mdi:bookmark-outline"></iconify-icon> 监控品牌库
+                            </button>
+<button class="w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-50 text-slate-600 rounded-lg font-medium text-sm text-left">
+<iconify-icon icon="mdi:database-sync"></iconify-icon> 数据源与API
+                            </button>
+<button class="w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-50 text-slate-600 rounded-lg font-medium text-sm text-left">
+<iconify-icon icon="mdi:shield-account"></iconify-icon> 成员与权限管理
+                            </button>
+<button class="w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-50 text-slate-600 rounded-lg font-medium text-sm text-left">
+<iconify-icon icon="mdi:bell-ring"></iconify-icon> 预警推送通知
+                            </button>
+<button class="w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-50 text-slate-600 rounded-lg font-medium text-sm text-left">
+<iconify-icon icon="mdi:history"></iconify-icon> 系统操作日志
+                            </button>
+</nav>
+</div>
+</div>
+<!-- 右侧：设置详情区 -->
+<div class="lg:col-span-3 space-y-8">
+<!-- 监控品牌库 -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100">
+<div class="p-6 border-b border-slate-100 flex justify-between items-center">
+<h3 class="font-bold text-slate-800">监控品牌库 (12/100)</h3>
+<button class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg flex items-center gap-1">
+<iconify-icon icon="mdi:plus"></iconify-icon> 添加品牌
+                            </button>
+</div>
+<div class="p-6">
+<table class="w-full text-sm">
+<thead>
+<tr class="text-slate-400 text-left">
+<th class="pb-4 font-medium px-2">品牌名称</th>
+<th class="pb-4 font-medium px-2 text-center">监听平台数</th>
+<th class="pb-4 font-medium px-2 text-center">状态</th>
+<th class="pb-4 font-medium px-2 text-right">操作</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-50">
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="py-4 px-2">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center font-bold text-slate-400">主</div>
+<span class="font-bold">我方品牌 (BrandListen)</span>
+</div>
+</td>
+<td class="py-4 px-2 text-center">8个平台</td>
+<td class="py-4 px-2 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-600">监听中</span>
+</td>
+<td class="py-4 px-2 text-right">
+<button class="text-indigo-600 hover:underline">编辑</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="py-4 px-2">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs">竞</div>
+<span class="font-bold">竞品 A (高端旗舰线)</span>
+</div>
+</td>
+<td class="py-4 px-2 text-center">6个平台</td>
+<td class="py-4 px-2 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-600">监听中</span>
+</td>
+<td class="py-4 px-2 text-right">
+<button class="text-indigo-600 hover:underline">编辑</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="py-4 px-2 text-center" colspan="4">
+<button class="text-slate-400 text-xs hover:text-indigo-600">加载更多品牌...</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- 数据源 API 状态 -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+<h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2">
+                            数据源与 API 状态
+                            <iconify-icon class="text-slate-300 text-sm" icon="mdi:information-outline" title="此区域显示平台实时抓取接口的健康度"></iconify-icon>
+</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="p-4 border border-slate-100 rounded-xl bg-slate-50">
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-bold text-slate-700">天猫/淘宝 API</span>
+<span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
+</div>
+<p class="text-[10px] text-slate-400 mb-2">频率限制: 5000/日 (剩余 3820)</p>
+<div class="w-full bg-slate-200 h-1 rounded-full">
+<div class="bg-indigo-600 h-1 rounded-full w-[76%]"></div>
+</div>
+</div>
+<div class="p-4 border border-slate-100 rounded-xl bg-slate-50">
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-bold text-slate-700">小红书 合规爬虫</span>
+<span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
+</div>
+<p class="text-[10px] text-slate-400 mb-2">连接延迟: 120ms (状态优)</p>
+<div class="w-full bg-slate-200 h-1 rounded-full">
+<div class="bg-indigo-600 h-1 rounded-full w-[100%]"></div>
+</div>
+</div>
+<div class="p-4 border border-rose-100 rounded-xl bg-rose-50/30">
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-bold text-rose-700">抖音 接口异常</span>
+<span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+</div>
+<p class="text-[10px] text-rose-400 mb-2">Token 过期，请重新授权</p>
+<div class="w-full bg-rose-100 h-1 rounded-full">
+<div class="bg-rose-500 h-1 rounded-full w-[0%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- 成员管理 -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100">
+<div class="p-6 border-b border-slate-100">
+<h3 class="font-bold text-slate-800">团队成员与权限</h3>
+</div>
+<div class="p-6 overflow-x-auto">
+<table class="w-full text-sm">
+<thead>
+<tr class="text-slate-400 text-left border-b border-slate-50">
+<th class="pb-4 font-medium px-2 uppercase text-[10px]">成员信息</th>
+<th class="pb-4 font-medium px-2 uppercase text-[10px]">角色</th>
+<th class="pb-4 font-medium px-2 uppercase text-[10px]">最后活跃时间</th>
+<th class="pb-4 font-medium px-2 uppercase text-[10px] text-right">操作</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-slate-50">
+<td class="py-4 px-2">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full" src="/agent-py/static/source/images/placeholder.svg"/>
+<div>
+<p class="font-bold">张经理 (我)</p>
+<p class="text-xs text-slate-400">zhang@company.com</p>
+</div>
+</div>
+</td>
+<td class="py-4 px-2">
+<span class="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full text-[10px] font-bold">系统管理员</span>
+</td>
+<td class="py-4 px-2 text-slate-400 font-mono text-xs">刚刚在线</td>
+<td class="py-4 px-2 text-right">
+<button class="text-slate-300 cursor-not-allowed">修改</button>
+</td>
+</tr>
+<tr class="border-b border-slate-50">
+<td class="py-4 px-2">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full" src="/agent-py/static/source/images/placeholder.svg"/>
+<div>
+<p class="font-bold">李小美</p>
+<p class="text-xs text-slate-400">li@company.com</p>
+</div>
+</div>
+</td>
+<td class="py-4 px-2">
+<span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px] font-bold">品牌分析师</span>
+</td>
+<td class="py-4 px-2 text-slate-400 font-mono text-xs">10小时前</td>
+<td class="py-4 px-2 text-right">
+<button class="text-indigo-600 hover:underline">修改</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body>
+</html>

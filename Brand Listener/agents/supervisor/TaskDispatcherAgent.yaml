@@ -1,0 +1,4 @@
+name: TaskDispatcherAgent
+type: agent
+inputs: [PendingTasks, ResourceAvailability]
+outputs: [AssignmentPlan]

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>用户之声分析 - 竞品监控与品牌文化监听平台</title>
+<script src="https://modao.cc/agent-py/static/source/js/tailwindcss.3.4.3.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/echarts.min.5.4.3.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900">
+<div class="flex min-h-screen">
+<!-- 侧边栏 (复用) -->
+<aside class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col fixed h-full z-20">
+<div class="p-6 flex items-center gap-3 border-b border-slate-800">
+<iconify-icon class="text-3xl text-indigo-400" icon="mdi:ShieldSearch"></iconify-icon>
+<span class="text-xl font-bold tracking-tight text-white">BrandListen AI</span>
+</div>
+<nav class="flex-1 p-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="index.html">
+<iconify-icon class="text-xl" icon="mdi:view-dashboard"></iconify-icon> 仪表盘首页
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="competitor.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:radar"></iconify-icon> 竞品监听管理
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="culture.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:account-group"></iconify-icon> 品牌文化监听
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 bg-indigo-600 rounded-lg text-white font-medium transition-all group" href="voc.html">
+<iconify-icon class="text-xl" icon="mdi:comment-quote"></iconify-icon> 用户之声分析
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="report.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:file-chart"></iconify-icon> 报告生成中心
+                </a>
+<div class="pt-4 pb-2 text-xs font-semibold text-slate-500 uppercase px-4">系统管理</div>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="settings.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:cog"></iconify-icon> 系统设置
+                </a>
+</nav>
+</aside>
+<main class="flex-1 ml-64 p-8">
+<header class="flex justify-between items-center mb-8">
+<div>
+<h1 class="text-2xl font-bold text-slate-800">用户之声 (VOC) 深度分析</h1>
+<p class="text-slate-500">通过AI语义分析，从全网海量评论中挖掘真实的痛点与期待。</p>
+</div>
+<div class="flex gap-3">
+<div class="bg-white border border-slate-200 rounded-lg px-3 py-1.5 flex items-center gap-2 text-sm text-slate-600">
+<iconify-icon class="text-indigo-500" icon="mdi:calendar-range"></iconify-icon>
+<span>2026-04-03 至 2026-04-10</span>
+</div>
+<button class="bg-white p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+<iconify-icon class="text-xl" icon="mdi:filter-variant"></iconify-icon>
+</button>
+</div>
+</header>
+<!-- 统计指标 -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+<h4 class="text-sm font-bold text-slate-500 mb-4 uppercase">整体情感占比</h4>
+<div class="h-48 w-full" id="sentimentPie"></div>
+</div>
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+<h4 class="text-sm font-bold text-slate-500 mb-6 uppercase">高频关键词云</h4>
+<div class="flex-1 flex flex-wrap content-center justify-center gap-3">
+<span class="text-2xl font-black text-indigo-600 px-3 py-1 bg-indigo-50 rounded-lg">系统流畅</span>
+<span class="text-xl font-bold text-blue-500 px-3 py-1 bg-blue-50 rounded-lg">AI交互</span>
+<span class="text-lg font-bold text-slate-600 px-2 py-1 bg-slate-50 rounded-lg">设计精美</span>
+<span class="text-base font-bold text-rose-500 px-2 py-1 bg-rose-50 rounded-lg">价格偏高</span>
+<span class="text-sm font-bold text-slate-400 px-2 py-1 bg-slate-50 rounded-lg">物流慢</span>
+<span class="text-xl font-bold text-indigo-400 px-2 py-1 bg-indigo-50 rounded-lg">续航强</span>
+<span class="text-base font-bold text-amber-500 px-2 py-1 bg-amber-50 rounded-lg">售后响应</span>
+</div>
+</div>
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+<h4 class="text-sm font-bold text-slate-500 mb-4 uppercase">反馈来源分布</h4>
+<div class="h-48 w-full" id="sourceBar"></div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- 情感分类详情 -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+<div class="p-6 border-b border-slate-100">
+<h4 class="font-bold text-slate-800">主题分类满意度</h4>
+</div>
+<div class="p-6 space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<span class="text-sm font-bold text-slate-700 flex items-center gap-2">
+<iconify-icon class="text-indigo-500" icon="mdi:cellphone-settings"></iconify-icon> 产品功能
+                                </span>
+<span class="text-xs text-green-600 font-bold">88% 满意度</span>
+</div>
+<div class="h-4 bg-slate-100 rounded-full flex overflow-hidden">
+<div class="bg-green-500 h-full w-[88%]"></div>
+<div class="bg-rose-400 h-full w-[12%]"></div>
+</div>
+<p class="text-[10px] text-slate-400">主要正向回响：AI建议准确、界面自适应极佳。</p>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<span class="text-sm font-bold text-slate-700 flex items-center gap-2">
+<iconify-icon class="text-blue-500" icon="mdi:truck-delivery"></iconify-icon> 物流配送
+                                </span>
+<span class="text-xs text-indigo-600 font-bold">75% 满意度</span>
+</div>
+<div class="h-4 bg-slate-100 rounded-full flex overflow-hidden">
+<div class="bg-indigo-500 h-full w-[75%]"></div>
+<div class="bg-rose-400 h-full w-[25%]"></div>
+</div>
+<p class="text-[10px] text-slate-400">主要负面反馈：西北地区物流时效低于预期。</p>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<span class="text-sm font-bold text-slate-700 flex items-center gap-2">
+<iconify-icon class="text-amber-500" icon="mdi:cash-multiple"></iconify-icon> 价格性价比
+                                </span>
+<span class="text-xs text-slate-400 font-bold">62% 满意度</span>
+</div>
+<div class="h-4 bg-slate-100 rounded-full flex overflow-hidden">
+<div class="bg-slate-400 h-full w-[62%]"></div>
+<div class="bg-rose-400 h-full w-[38%]"></div>
+</div>
+<p class="text-[10px] text-slate-400">讨论焦点：2026款涨价 ¥500 的合理性引发争论。</p>
+</div>
+</div>
+</div>
+<!-- 实时评价流 -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col max-h-[420px]">
+<div class="p-6 border-b border-slate-100 flex justify-between items-center">
+<h4 class="font-bold text-slate-800">最新全网原声</h4>
+<div class="flex gap-1">
+<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+<span class="text-[10px] text-slate-400 font-bold">实时同步中</span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+<div class="flex gap-3 p-3 bg-slate-50 rounded-xl">
+<img class="w-8 h-8 rounded-full" src="/agent-py/static/source/images/placeholder.svg"/>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold text-slate-700">数码达人小白</span>
+<span class="text-[10px] text-slate-400">2分钟前 · 小红书</span>
+</div>
+<p class="text-xs text-slate-600 line-clamp-2">BrandListen推出的这款智能中控真的刷新了我的认知，AI交互太自然了，简直是未来科技！</p>
+<div class="mt-2 flex gap-1">
+<span class="text-[8px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded">正面</span>
+<span class="text-[8px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded">产品功能</span>
+</div>
+</div>
+</div>
+<div class="flex gap-3 p-3 bg-slate-50 rounded-xl">
+<img class="w-8 h-8 rounded-full" src="/agent-py/static/source/images/placeholder.svg"/>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold text-slate-700">愤怒的小马</span>
+<span class="text-[10px] text-slate-400">15分钟前 · 天猫</span>
+</div>
+<p class="text-xs text-slate-600 line-clamp-2">物流太慢了！同城都要三天，服务态度也就那样，体验极差。</p>
+<div class="mt-2 flex gap-1">
+<span class="text-[8px] bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded">负面</span>
+<span class="text-[8px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">物流配送</span>
+</div>
+</div>
+</div>
+<div class="flex gap-3 p-3 bg-slate-50 rounded-xl">
+<img class="w-8 h-8 rounded-full" src="/agent-py/static/source/images/placeholder.svg"/>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold text-slate-700">J**3</span>
+<span class="text-[10px] text-slate-400">42分钟前 · 京东</span>
+</div>
+<p class="text-xs text-slate-600 line-clamp-2">价格虽然贵了点，但是看在售后的份上还是买了，希望不要让我失望。</p>
+<div class="mt-2 flex gap-1">
+<span class="text-[8px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">中性</span>
+<span class="text-[8px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded">价格性价比</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<script>
+        // 情感饼图
+        const sentimentPie = echarts.init(document.getElementById('sentimentPie'));
+        sentimentPie.setOption({
+            tooltip: { trigger: 'item' },
+            legend: { bottom: '0%', left: 'center', itemWidth: 8, itemHeight: 8, textStyle: { fontSize: 10 } },
+            series: [{
+                type: 'pie',
+                radius: ['40%', '70%'],
+                avoidLabelOverlap: false,
+                itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 },
+                label: { show: false },
+                data: [
+                    { value: 65, name: '正面回响', itemStyle: { color: '#22c55e' } },
+                    { value: 25, name: '中性观察', itemStyle: { color: '#94a3b8' } },
+                    { value: 10, name: '负面反馈', itemStyle: { color: '#f43f5e' } }
+                ]
+            }]
+        });
+
+        // 来源柱状图
+        const sourceBar = echarts.init(document.getElementById('sourceBar'));
+        sourceBar.setOption({
+            grid: { top: '10%', bottom: '20%', left: '10%', right: '5%' },
+            xAxis: { type: 'category', data: ['天猫', '京东', '小红书', '抖音', '微博'], axisLabel: { fontSize: 10, color: '#94a3b8' } },
+            yAxis: { type: 'value', show: false },
+            series: [{
+                data: [420, 310, 850, 620, 150],
+                type: 'bar',
+                barWidth: '40%',
+                itemStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: '#6366f1' },
+                        { offset: 1, color: '#a5b4fc' }
+                    ]),
+                    borderRadius: [4, 4, 0, 0]
+                }
+            }]
+        });
+
+        window.addEventListener('resize', () => {
+            sentimentPie.resize();
+            sourceBar.resize();
+        });
+    </script>
+</body>
+</html>

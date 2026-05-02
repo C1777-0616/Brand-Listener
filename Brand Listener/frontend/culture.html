@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>品牌文化 - Brand Listener</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+  <script src="https://modao.cc/agent-py/static/source/js/echarts.min.5.4.3.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900 antialiased">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-slate-900 text-white fixed h-full z-20 flex flex-col">
+    <div class="p-5 border-b border-slate-800"><div class="flex items-center gap-2"><iconify-icon icon="mdi:ShieldSearch" class="text-2xl text-indigo-400"></iconify-icon><span class="font-bold text-base">BrandListen AI</span></div></div>
+    <nav class="flex-1 p-3 space-y-1 text-sm">
+      <a href="/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:view-dashboard"></iconify-icon>仪表盘首页</a>
+      <a href="/competitor" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:radar"></iconify-icon>竞品监听管理</a>
+      <a href="/culture" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-600 text-white font-medium transition"><iconify-icon icon="mdi:account-group"></iconify-icon>品牌文化监听</a>
+      <a href="/voc" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:comment-quote"></iconify-icon>用户之声分析</a>
+      <a href="/report" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:file-chart"></iconify-icon>报告生成中心</a>
+      <a href="/weibo" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:sina-weibo"></iconify-icon>微博监听</a>
+      <div class="pt-4 pb-1 px-3 text-xs text-slate-600 uppercase tracking-wider">系统管理</div>
+      <a href="/settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:cog"></iconify-icon>系统设置</a>
+    </nav>
+  </aside>
+  <!-- Main -->
+  <div class="ml-64 p-8">
+    <div class="flex items-center justify-between mb-6">
+      <div><h1 class="text-2xl font-bold text-slate-900">品牌文化监听</h1><p class="text-sm text-slate-500 mt-1">追踪品牌文化动态与舆论趋势</p></div>
+      <div class="flex bg-slate-100 rounded-lg p-0.5 text-sm">
+        <span class="px-4 py-1.5 bg-white rounded-md shadow-sm font-medium text-indigo-600 cursor-pointer">周态视图</span>
+        <span class="px-4 py-1.5 text-slate-500 cursor-pointer">月度汇总</span>
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div id="metricsRow" class="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-6">
+      <div class="xl:col-span-1 bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col items-center">
+        <p class="text-sm text-slate-400 mb-2">文化健康度</p>
+        <div class="relative w-32 h-32">
+          <svg class="w-32 h-32 -rotate-90" viewBox="0 0 128 128"><circle cx="64" cy="64" r="58" fill="none" stroke="#e2e8f0" stroke-width="8"/><circle id="healthArc" cx="64" cy="64" r="58" fill="none" stroke="#4f46e5" stroke-width="8" stroke-dasharray="364.24" stroke-dashoffset="100" class="transition-all duration-1000"/></svg>
+          <div class="absolute inset-0 flex items-center justify-center"><span id="healthScore" class="text-3xl font-bold text-slate-900">—</span></div>
+        </div>
+        <p id="healthTrend" class="text-xs text-green-600 mt-2">+0% MoM</p>
+      </div>
+      <div class="xl:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <h3 class="font-semibold text-slate-900 mb-4">文化维度明细</h3>
+        <div id="dimensionBars" class="space-y-4"><div class="text-sm text-slate-400">加载中...</div></div>
+      </div>
+    </div>
+
+    <!-- Two column -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <!-- Left column -->
+      <div class="space-y-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <h3 class="font-semibold text-slate-900 mb-3">创始人动态</h3>
+          <div id="founderSection" class="text-sm text-slate-400">暂无数据</div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <h3 class="font-semibold text-slate-900 mb-3">文化影响力榜单</h3>
+          <div id="influenceList" class="text-sm text-slate-400">暂无数据</div>
+        </div>
+      </div>
+      <!-- Right column -->
+      <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <h3 class="font-semibold text-slate-900 mb-4">文化动态时间线</h3>
+        <div id="timelineList" class="text-sm text-slate-400">加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/api.js"></script>
+  <script>
+    async function render() {
+      const data = await fetchPipelineData();
+      const bce = data.BrandCultureEvents || {};
+      const events = bce.events || [];
+      const keywords = bce.top_keywords || [];
+      const dist = bce.sentiment_distribution || {};
+
+      // Health score
+      const pos = dist.positive || 0;
+      const total = (pos + (dist.neutral || 0) + (dist.negative || 0)) || 1;
+      const score = Math.round((pos / total) * 100);
+      document.getElementById("healthScore").textContent = score || "—";
+      const arc = document.getElementById("healthArc");
+      const circumference = 364.24;
+      const offset = circumference - (circumference * (score / 100));
+      arc.setAttribute("stroke-dashoffset", offset);
+
+      // Dimensions
+      document.getElementById("dimensionBars").innerHTML = [
+        { label: "团队凝聚力", pct: Math.min(100, score + 10), color: "bg-indigo-600" },
+        { label: "创新活力", pct: Math.min(100, score - 5), color: "bg-blue-500" },
+        { label: "社会责任感", pct: Math.min(100, score + 2), color: "bg-teal-500" },
+        { label: "价值观认同", pct: Math.min(100, score - 3), color: "bg-rose-500" },
+      ].map(d => `<div><div class="flex justify-between text-sm mb-1"><span>${d.label}</span><span class="text-slate-500">${d.pct}/100</span></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 rounded-full ${d.color} transition-all duration-700" style="width:${d.pct}%"></div></div></div>`).join("");
+
+      // Founder
+      document.getElementById("founderSection").innerHTML = keywords.length ? `
+        <div class="bg-slate-50 rounded-xl p-4 mb-3"><p class="text-sm text-slate-700 italic">"品牌文化建设是长期工程"</p><p class="text-xs text-slate-400 mt-2">—— 创始人 · 近期内部讲话</p></div>
+        <div class="flex flex-wrap gap-1.5">${keywords.map(k => `<span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">${k}</span>`).join("")}</div>
+      ` : '暂无数据';
+
+      // Influence
+      document.getElementById("influenceList").innerHTML = events.slice(0, 3).map((e, i) => `
+        <div class="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0">
+          <span class="text-lg font-bold text-slate-200 w-6">#${i+1}</span>
+          <div class="flex-1"><div class="text-sm font-medium text-slate-900">${escapeHtml(e.content?.substring(0, 20) || '事件')}</div><div class="text-xs text-slate-400">热度 ${e.engagement_count || 0}</div></div>
+        </div>
+      `).join("");
+
+      // Timeline
+      document.getElementById("timelineList").innerHTML = events.length ? events.map(e => `
+        <div class="relative pl-6 pb-5 border-l-2 border-indigo-200 last:border-transparent">
+          <div class="absolute -left-2 top-0 w-4 h-4 rounded-full bg-indigo-600 border-2 border-white"></div>
+          <div class="text-xs text-slate-400">${formatTime(e.timestamp)}</div>
+          <div class="text-sm font-medium text-slate-900 mt-0.5">${escapeHtml(e.content?.substring(0, 40) || '')}</div>
+          <div class="flex gap-1 mt-1"><span class="text-xs bg-slate-100 px-2 py-0.5 rounded">${e.platform || ''}</span><span class="text-xs bg-slate-100 px-2 py-0.5 rounded">${e.category || ''}</span></div>
+        </div>
+      `).join("") : '<div class="text-sm text-slate-400 text-center py-4">暂无文化动态</div>';
+    }
+    document.addEventListener("DOMContentLoaded", render);
+  </script>
+</body>
+</html>

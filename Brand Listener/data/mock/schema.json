@@ -1,0 +1,15 @@
+{
+  "entities": [
+    "BrandCultureEvent",
+    "Post",
+    "FeedbackItem",
+    "BrandEvent",
+    "AnalysisResult",
+    "Insight",
+    "Template",
+    "Report",
+    "Task",
+    "DataExport"
+  ],
+  "sources": ["weibo", "xiaohongshu", "pinduoduo", "taobao", "jd"]
+}

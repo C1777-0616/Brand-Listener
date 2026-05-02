@@ -1,0 +1,92 @@
+[
+  {
+    "source_url": "https://weibo.com/brandlisten_official",
+    "id": "wb_20260424_001",
+    "title": "新品发布会预告",
+    "content": "【BrandListen AI 2.0 即将发布】我们很高兴地宣布，BrandListen AI 2.0 将于下月正式上线。新版本将引入实时情感分析、跨平台舆情追踪和智能预警系统三大核心功能。感谢各位用户一直以来的支持！#BrandListen #AI舆情监控",
+    "url": "https://weibo.com/brandlisten_official/Fabc123",
+    "media_urls": [
+      "https://example.com/images/brandlisten_2.0_poster.jpg",
+      "https://example.com/images/brandlisten_2.0_screenshot1.jpg"
+    ],
+    "thumbnail_url": "https://example.com/images/brandlisten_2.0_thumb.jpg",
+    "published_at": "2026-04-24 10:30:00",
+    "engagement_metrics": {
+      "likes": 1523,
+      "comments": 342,
+      "shares": 89
+    },
+    "platform": "weibo"
+  },
+  {
+    "source_url": "https://weibo.com/brandlisten_official",
+    "id": "wb_20260423_002",
+    "title": "",
+    "content": "每日舆情速递 2026.04.23：今日监测到竞品A在抖音发起新一轮投放，预算预计500万+；用户之声方面，\"定价敏感\"关键词热度上升40%，建议市场部关注。完整报告请登录后台查看。",
+    "url": "https://weibo.com/brandlisten_official/Gdef456",
+    "media_urls": [],
+    "thumbnail_url": null,
+    "published_at": "2026-04-23 18:00:00",
+    "engagement_metrics": {
+      "likes": 876,
+      "comments": 123,
+      "shares": 45
+    },
+    "platform": "weibo"
+  },
+  {
+    "source_url": "https://weibo.com/competitor_a_official",
+    "id": "wb_20260424_003",
+    "title": "618大促预热",
+    "content": "距离618还有一个月，我们准备了超多福利！即日起关注@竞品A官方账号，转发本条微博并@三位好友，就有机会获得价值2999元的旗舰产品一台。详情戳大图了解～ #618必买清单 #竞品A大促",
+    "url": "https://weibo.com/competitor_a_official/Hghi789",
+    "media_urls": [
+      "https://example.com/images/competitor_a_618_promo.jpg"
+    ],
+    "thumbnail_url": "https://example.com/images/competitor_a_618_thumb.jpg",
+    "published_at": "2026-04-24 09:15:00",
+    "engagement_metrics": {
+      "likes": 3210,
+      "comments": 892,
+      "shares": 567
+    },
+    "platform": "weibo"
+  },
+  {
+    "source_url": "https://weibo.com/competitor_a_official",
+    "id": "wb_20260422_004",
+    "title": "用户故事分享",
+    "content": "感谢@用户小张 分享的使用心得！\"使用竞品A的产品已经半年了，最让我惊喜的是它的续航能力，重度使用也能坚持两天。\" 我们也为小张准备了一份小礼物，感谢你的支持！有奖征集中，分享你的故事赢好礼～",
+    "url": "https://weibo.com/competitor_a_official/Ijkl012",
+    "media_urls": [
+      "https://example.com/images/user_story_xiaozhang.jpg"
+    ],
+    "thumbnail_url": "https://example.com/images/user_story_thumb.jpg",
+    "published_at": "2026-04-22 14:30:00",
+    "engagement_metrics": {
+      "likes": 654,
+      "comments": 89,
+      "shares": 34
+    },
+    "platform": "weibo"
+  },
+  {
+    "source_url": "https://weibo.com/competitor_b_official",
+    "id": "wb_20260424_005",
+    "title": "行业白皮书发布",
+    "content": "2026 中国品牌舆情管理行业白皮书正式发布！由竞品B研究院联合中国营销协会共同编写，涵盖行业趋势、技术演进、典型案例三大篇章。评论区留言"白皮书"即可获取下载链接。",
+    "url": "https://weibo.com/competitor_b_official/Klmn345",
+    "media_urls": [
+      "https://example.com/images/whitepaper_cover.jpg",
+      "https://example.com/images/whitepaper_toc.jpg"
+    ],
+    "thumbnail_url": "https://example.com/images/whitepaper_thumb.jpg",
+    "published_at": "2026-04-24 08:00:00",
+    "engagement_metrics": {
+      "likes": 2341,
+      "comments": 567,
+      "shares": 890
+    },
+    "platform": "weibo"
+  }
+]

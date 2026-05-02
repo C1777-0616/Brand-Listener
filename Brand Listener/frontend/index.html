@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>仪表盘 - Brand Listener</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900 antialiased">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-slate-900 text-white fixed h-full z-20 flex flex-col">
+    <div class="p-5 border-b border-slate-800"><div class="flex items-center gap-2"><iconify-icon icon="mdi:ShieldSearch" class="text-2xl text-indigo-400"></iconify-icon><span class="font-bold text-base">BrandListen AI</span></div></div>
+    <nav class="flex-1 p-3 space-y-1 text-sm">
+      <a href="/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-600 text-white font-medium transition"><iconify-icon icon="mdi:view-dashboard"></iconify-icon>仪表盘首页</a>
+      <a href="/competitor" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:radar"></iconify-icon>竞品监听管理</a>
+      <a href="/culture" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:account-group"></iconify-icon>品牌文化监听</a>
+      <a href="/voc" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:comment-quote"></iconify-icon>用户之声分析</a>
+      <a href="/report" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:file-chart"></iconify-icon>报告生成中心</a>
+      <a href="/weibo" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:sina-weibo"></iconify-icon>微博监听</a>
+      <div class="pt-4 pb-1 px-3 text-xs text-slate-600 uppercase tracking-wider">系统管理</div>
+      <a href="/settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:cog"></iconify-icon>系统设置</a>
+    </nav>
+  </aside>
+  <!-- Main -->
+  <div class="ml-64 p-8">
+    <div class="flex items-center justify-between mb-8">
+      <div><h1 class="text-2xl font-bold text-slate-900">仪表盘首页</h1><p class="text-sm text-slate-500 mt-1">品牌竞争态势总览</p></div>
+      <button id="runBtn" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg shadow-lg shadow-indigo-200/50 text-sm font-medium transition">
+        <iconify-icon icon="mdi:play-circle"></iconify-icon>运行流水线
+      </button>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8" id="kpiGrid">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6"><div class="flex items-center gap-3 text-indigo-600 mb-2"><iconify-icon icon="mdi:update" class="text-xl"></iconify-icon><span class="text-sm font-medium text-slate-400">官方更新</span></div><p class="text-3xl font-bold" id="kpi-updates">—</p></div>
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6"><div class="flex items-center gap-3 text-emerald-600 mb-2"><iconify-icon icon="mdi:account-group" class="text-xl"></iconify-icon><span class="text-sm font-medium text-slate-400">文化事件</span></div><p class="text-3xl font-bold" id="kpi-culture">—</p></div>
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6"><div class="flex items-center gap-3 text-amber-600 mb-2"><iconify-icon icon="mdi:comment-text" class="text-xl"></iconify-icon><span class="text-sm font-medium text-slate-400">反馈总数</span></div><p class="text-3xl font-bold" id="kpi-feedback">—</p></div>
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6"><div class="flex items-center gap-3 text-rose-600 mb-2"><iconify-icon icon="mdi:chart-line" class="text-xl"></iconify-icon><span class="text-sm font-medium text-slate-400">竞品活动</span></div><p class="text-3xl font-bold" id="kpi-competitor">—</p></div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <h3 class="font-semibold text-slate-900 mb-4">数据采集概览</h3>
+        <div id="overviewChart" class="h-64 flex items-center justify-center text-slate-300 text-sm">加载中...</div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <h3 class="font-semibold text-slate-900 mb-4">最新上传</h3>
+        <div id="latestExports" class="space-y-3">
+          <div class="text-sm text-slate-400">暂无上传文件</div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-slate-100">
+          <div class="flex gap-2">
+            <input type="file" id="fileInput" accept=".json,.csv" class="text-sm flex-1" />
+            <button id="uploadBtn" class="text-sm bg-indigo-600 text-white px-4 py-1.5 rounded-lg hover:bg-indigo-700 transition">上传</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent pipeline data summary -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+      <h3 class="font-semibold text-slate-900 mb-4">最近运行结果</h3>
+      <div id="pipelineSummary" class="text-sm text-slate-400">尚未运行流水线</div>
+    </div>
+  </div>
+
+  <script src="/static/api.js"></script>
+  <script>
+    let data = {};
+    async function refresh() {
+      data = await fetchPipelineData();
+      renderKPI();
+      renderChart();
+      renderExports();
+      renderSummary();
+    }
+
+    function renderKPI() {
+      const ofu = data.OfficialUpdates || {};
+      const bce = data.BrandCultureEvents || {};
+      const smf = data.SocialMediaFeedback || {};
+      const spf = data.ShoppingFeedback || {};
+      const cca = data.CompetitorCampaignAnalysis || {};
+      document.getElementById("kpi-updates").textContent = (ofu.updates || []).length;
+      document.getElementById("kpi-culture").textContent = bce.total_events || (bce.events || []).length;
+      document.getElementById("kpi-feedback").textContent = (smf.items || []).length + (spf.items || []).length;
+      document.getElementById("kpi-competitor").textContent = cca.total_campaigns_analyzed || 0;
+    }
+
+    function renderChart() {
+      const el = document.getElementById("overviewChart");
+      const ofu = (data.OfficialUpdates || {}).updates || [];
+      const bce = data.BrandCultureEvents || {};
+      const smf = (data.SocialMediaFeedback || {}).items || [];
+      const spf = (data.ShoppingFeedback || {}).items || [];
+      el.innerHTML = `<div class="grid grid-cols-2 gap-4 w-full max-w-md mx-auto">
+        <div class="text-center p-4 bg-indigo-50 rounded-xl"><div class="text-2xl font-bold text-indigo-600">${ofu.length}</div><div class="text-xs text-slate-500 mt-1">官方更新</div></div>
+        <div class="text-center p-4 bg-emerald-50 rounded-xl"><div class="text-2xl font-bold text-emerald-600">${bce.total_events || (bce.events || []).length}</div><div class="text-xs text-slate-500 mt-1">文化事件</div></div>
+        <div class="text-center p-4 bg-amber-50 rounded-xl"><div class="text-2xl font-bold text-amber-600">${smf.length}</div><div class="text-xs text-slate-500 mt-1">社媒反馈</div></div>
+        <div class="text-center p-4 bg-rose-50 rounded-xl"><div class="text-2xl font-bold text-rose-600">${spf.length}</div><div class="text-xs text-slate-500 mt-1">电商评价</div></div>
+      </div>`;
+    }
+
+    async function renderExports() {
+      try {
+        const ex = await listExports();
+        const el = document.getElementById("latestExports");
+        if (!ex.files || ex.files.length === 0) {
+          el.innerHTML = '<div class="text-sm text-slate-400">暂无上传文件</div>';
+        } else {
+          el.innerHTML = ex.files.slice(0, 5).map(f =>
+            `<div class="flex justify-between text-sm"><span>${escapeHtml(f.name)}</span><span class="text-slate-400">${(f.size/1024).toFixed(1)} KB</span></div>`
+          ).join("");
+        }
+      } catch {}
+    }
+
+    function renderSummary() {
+      const el = document.getElementById("pipelineSummary");
+      const count = Object.keys(data).length;
+      if (count === 0) { el.textContent = "尚未运行流水线"; return; }
+      el.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-3">${
+        Object.entries(data).filter(([k,v]) => v && typeof v === 'object').map(([k,v]) =>
+          `<div class="p-3 bg-slate-50 rounded-lg"><div class="text-xs text-slate-400">${k}</div><div class="text-sm font-medium mt-1">${Object.keys(v).length} 个字段</div></div>`
+        ).join("")
+      }</div>`;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      refresh();
+      document.getElementById("runBtn").addEventListener("click", async () => {
+        const btn = document.getElementById("runBtn"); btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> 运行中...';
+        try { await runPipeline(); await refresh(); btn.innerHTML = '<iconify-icon icon="mdi:check-circle"></iconify-icon> 完成'; setTimeout(() => { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:play-circle"></iconify-icon> 运行流水线'; }, 1500); }
+        catch { btn.innerHTML = '失败'; btn.disabled = false; }
+      });
+      document.getElementById("uploadBtn").addEventListener("click", async () => {
+        const input = document.getElementById("fileInput");
+        if (!input.files[0]) return;
+        try { await uploadExport(input.files[0]); alert("上传成功"); input.value = ""; renderExports(); } catch(e) { alert("上传失败: "+e.message); }
+      });
+    });
+  </script>
+</body>
+</html>

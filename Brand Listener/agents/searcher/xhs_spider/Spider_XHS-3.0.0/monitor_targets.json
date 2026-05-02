@@ -1,0 +1,14 @@
+{
+  "targets": [
+    {
+      "name": "示例博主A",
+      "enabled": true,
+      "user_url": "https://www.xiaohongshu.com/user/profile/请替换为目标用户ID?xsec_token=请替换为该用户页token&xsec_source=pc_search"
+    },
+    {
+      "name": "示例博主B",
+      "enabled": false,
+      "user_id": "请替换为目标用户ID"
+    }
+  ]
+}

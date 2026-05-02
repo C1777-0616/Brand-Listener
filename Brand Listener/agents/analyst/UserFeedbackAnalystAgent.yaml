@@ -1,0 +1,4 @@
+name: UserFeedbackAnalystAgent
+type: agent
+inputs: [ShoppingFeedback, SocialMediaFeedback]
+outputs: [UserFeedbackInsights]

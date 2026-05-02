@@ -1,0 +1,21 @@
+name: XiaohongshuUpdatesAgent
+type: sub-agent
+parent: OfficialUpdatesAgent
+platform: xiaohongshu
+description: |
+  小红书数据采集子 agent，基于 Spider_XHS 项目。
+  支持固定博主监听和关键词搜索，可按粉丝数/点赞数筛选。
+module: src.agents.searcher.xiaohongshu_updates_agent
+class: XiaohongshuUpdatesAgent
+config:
+  lookback_hours: 24
+  xhs_cookies: "${XHS_COOKIES}"
+  xhs_monitor_targets: []
+  xhs_search_keywords: []
+  xhs_search_num: 20
+  xhs_min_likes: 0
+  xhs_min_fans: 0
+input_schema:
+  sources: {type: array, items: {type: string, format: uri}}
+output_schema:
+  updates: {type: array, items: {$ref: "OfficialUpdatesAgent.yaml#/definitions/OfficialUpdate"}}

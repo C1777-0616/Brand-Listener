@@ -1,0 +1,22 @@
+name: ContentClassificationAgent
+type: sub-agent
+parent: OfficialUpdatesAgent (pipeline position)
+description: |
+  Classifies each OfficialUpdate post into one of 8 business-oriented content types
+  via keyword matching. Pure in-memory, no external IO.
+  Runs after OfficialUpdatesAgent, before BrandCultureAgent.
+inputs: [OfficialUpdates]
+outputs: [OfficialUpdates]  # same key, update_type fields rewritten
+module: src.agents.searcher.content_classification_agent
+factory: create_content_classification_agent
+
+classification_rules:
+  priority_order:
+    - new_product:      [新品, 上市, 首发, 发布, 推出, 全新, 升级, 新款, 新系列, 问世, 新上]
+    - promotion:        [折扣, 优惠, 满减, 秒杀, 限时, 买赠, 大促, 领券, 活动价, 立减, 特价, 限量, 抢购, 包邮]
+    - kol_collab:       [代言, 品牌大使, 官宣, 联名, 挚友, 合作伙伴, 形象大使]
+    - user_engagement:  [抽奖, 转发, 评论抽, 赢取, 话题, 挑战赛, 征集, 投票, 参与, 互动, 晒图, 打卡]
+    - offline_event:    [快闪, 展览, 展位, 线下, 发布会, 现场, 到场, 体验店, 快闪店, 见面会]
+    - corporate_news:   [荣获, 入选, 认证, 公益, 社会责任, 声明, 公告, 官方回应, 获奖, 里程碑]
+    - product_content:  [使用, 体验, 效果, 测评, 教程, 步骤, 方法, 前后对比, 成分, 配方, 功效, 护理]
+    - brand_content:    fallback (no keyword matched)

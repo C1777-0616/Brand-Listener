@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>品牌文化监听 - 竞品监控与品牌文化监听平台</title>
+<script src="https://modao.cc/agent-py/static/source/js/tailwindcss.3.4.3.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/echarts.min.5.4.3.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900">
+<div class="flex min-h-screen">
+<!-- 侧边栏 (复用) -->
+<aside class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col fixed h-full z-20">
+<div class="p-6 flex items-center gap-3 border-b border-slate-800">
+<iconify-icon class="text-3xl text-indigo-400" icon="mdi:ShieldSearch"></iconify-icon>
+<span class="text-xl font-bold tracking-tight text-white">BrandListen AI</span>
+</div>
+<nav class="flex-1 p-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="index.html">
+<iconify-icon class="text-xl" icon="mdi:view-dashboard"></iconify-icon> 仪表盘首页
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="competitor.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:radar"></iconify-icon> 竞品监听管理
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 bg-indigo-600 rounded-lg text-white font-medium transition-all group" href="culture.html">
+<iconify-icon class="text-xl" icon="mdi:account-group"></iconify-icon> 品牌文化监听
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="voc.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:comment-quote"></iconify-icon> 用户之声分析
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="report.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:file-chart"></iconify-icon> 报告生成中心
+                </a>
+<div class="pt-4 pb-2 text-xs font-semibold text-slate-500 uppercase px-4">系统管理</div>
+<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="settings.html">
+<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:cog"></iconify-icon> 系统设置
+                </a>
+</nav>
+</aside>
+<main class="flex-1 ml-64 p-8">
+<header class="flex justify-between items-center mb-8">
+<div>
+<h1 class="text-2xl font-bold text-slate-800">品牌文化监听面板</h1>
+<p class="text-slate-500">从企业文化建设到创始人IP形象，多维度评估品牌长线价值。</p>
+</div>
+<div class="flex bg-white rounded-lg shadow-sm border border-slate-200 p-1">
+<button class="px-4 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-md">周态视图</button>
+<button class="px-4 py-1.5 text-slate-500 text-sm font-medium rounded-md hover:bg-slate-50">月度汇总</button>
+</div>
+</header>
+<!-- 核心文化指标卡 -->
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 col-span-1 flex flex-col items-center justify-center text-center">
+<p class="text-slate-500 text-sm mb-2">文化健康度</p>
+<div class="relative w-32 h-32 flex items-center justify-center mb-4">
+<svg class="w-full h-full -rotate-90">
+<circle class="text-slate-100" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-indigo-600" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-dasharray="364.24" stroke-dashoffset="54.63" stroke-width="8"></circle>
+</svg>
+<span class="absolute text-3xl font-extrabold text-slate-800">85</span>
+</div>
+<p class="text-xs text-green-500 font-bold flex items-center gap-1">
+<iconify-icon icon="mdi:trending-up"></iconify-icon> 较上月提升 3.2%
+                    </p>
+</div>
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 col-span-3">
+<h4 class="font-bold text-slate-800 mb-6 flex justify-between items-center">
+                        文化维度明细
+                        <span class="text-xs font-normal text-slate-400">更新时间: 今日 08:00</span>
+</h4>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold text-slate-600">
+<span>团队凝聚力</span>
+<span>92/100</span>
+</div>
+<div class="h-2 bg-slate-100 rounded-full">
+<div class="bg-indigo-600 h-2 rounded-full w-[92%]"></div>
+</div>
+<p class="text-[10px] text-slate-400 leading-tight">基于员工活动参与率及内网正面讨论热度计算。</p>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold text-slate-600">
+<span>创新活力</span>
+<span>78/100</span>
+</div>
+<div class="h-2 bg-slate-100 rounded-full">
+<div class="bg-blue-500 h-2 rounded-full w-[78%]"></div>
+</div>
+<p class="text-[10px] text-slate-400 leading-tight">基于知识产权申报量及内部创新提案活跃度计算。</p>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold text-slate-600">
+<span>社会责任感</span>
+<span>85/100</span>
+</div>
+<div class="h-2 bg-slate-100 rounded-full">
+<div class="bg-teal-500 h-2 rounded-full w-[85%]"></div>
+</div>
+<p class="text-[10px] text-slate-400 leading-tight">基于ESG报道热度及公益项目执行进度计算。</p>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold text-slate-600">
+<span>价值观认同</span>
+<span>81/100</span>
+</div>
+<div class="h-2 bg-slate-100 rounded-full">
+<div class="bg-rose-500 h-2 rounded-full w-[81%]"></div>
+</div>
+<p class="text-[10px] text-slate-400 leading-tight">基于高管发言对齐率及员工随机访谈评分计算。</p>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- 左侧：创始人动态追踪 -->
+<div class="lg:col-span-1 space-y-6">
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+<h4 class="font-bold text-slate-800 mb-6 flex items-center gap-2">
+<iconify-icon class="text-indigo-600 text-xl" icon="mdi:account-voice"></iconify-icon> 创始人动态
+                        </h4>
+<div class="flex items-center gap-4 mb-6">
+<img class="w-14 h-14 rounded-full border-2 border-indigo-100" src="/agent-py/static/source/images/placeholder.svg"/>
+<div>
+<p class="text-base font-bold text-slate-800">王志强</p>
+<p class="text-xs text-slate-500">BrandListen 创始人 &amp; CEO</p>
+</div>
+<div class="ml-auto bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full font-bold">正面声量高</div>
+</div>
+<div class="space-y-4">
+<div class="p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+<p class="text-xs text-slate-400 mb-1">2026-04-08 演讲</p>
+<p class="text-sm font-bold text-slate-800 line-clamp-2 italic">“在AI驱动的时代，品牌不再仅仅是标志，而是企业灵魂的数字化回响。”</p>
+<div class="flex gap-4 mt-2">
+<span class="text-[10px] text-slate-500"><iconify-icon icon="mdi:thumb-up"></iconify-icon> 1.2k</span>
+<span class="text-[10px] text-slate-500"><iconify-icon icon="mdi:newspaper-variant"></iconify-icon> 15+ 报道</span>
+</div>
+</div>
+<div class="p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+<p class="text-xs text-slate-400 mb-1">2026-04-05 媒体专访</p>
+<p class="text-sm font-bold text-slate-800 line-clamp-2 italic">接受《财经周刊》专访，探讨2026年企业级AI市场竞争格局。</p>
+<div class="flex gap-4 mt-2">
+<span class="text-[10px] text-slate-500"><iconify-icon icon="mdi:eye"></iconify-icon> 5.8w 阅读</span>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-all">查看全部发言库</button>
+</div>
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+<h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+<iconify-icon class="text-orange-500 text-xl" icon="mdi:star-circle"></iconify-icon> 文化影响力榜单
+                        </h4>
+<div class="space-y-4">
+<div class="flex items-center gap-3">
+<span class="text-lg font-black text-slate-200">01</span>
+<span class="text-sm text-slate-700">春季校园招聘价值观宣讲</span>
+<span class="ml-auto text-xs font-bold text-indigo-600">热度 9.8k</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-lg font-black text-slate-200">02</span>
+<span class="text-sm text-slate-700">“代码之光”内部极客大赛</span>
+<span class="ml-auto text-xs font-bold text-indigo-600">热度 8.5k</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-lg font-black text-slate-200">03</span>
+<span class="text-sm text-slate-700">绿色低碳办公倡议周</span>
+<span class="ml-auto text-xs font-bold text-indigo-600">热度 7.2k</span>
+</div>
+</div>
+</div>
+</div>
+<!-- 右侧：周态时间线视图 -->
+<div class="lg:col-span-2">
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 h-full">
+<div class="flex justify-between items-center mb-8">
+<h4 class="font-bold text-slate-800 flex items-center gap-2">
+<iconify-icon class="text-indigo-600 text-xl" icon="mdi:calendar-clock"></iconify-icon> 2026年4月第1周文化动态
+                            </h4>
+<div class="flex gap-2">
+<button class="p-1.5 hover:bg-slate-100 rounded border border-slate-200"><iconify-icon icon="mdi:chevron-left"></iconify-icon></button>
+<button class="p-1.5 hover:bg-slate-100 rounded border border-slate-200"><iconify-icon icon="mdi:chevron-right"></iconify-icon></button>
+</div>
+</div>
+<div class="relative pl-8 space-y-8 before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-px before:bg-slate-200">
+<!-- 时间点 1 -->
+<div class="relative">
+<div class="absolute -left-8 top-1.5 w-7 h-7 bg-indigo-600 rounded-full border-4 border-white shadow-sm flex items-center justify-center">
+<iconify-icon class="text-xs text-white" icon="mdi:flag"></iconify-icon>
+</div>
+<div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+<div class="flex justify-between items-start mb-2">
+<h5 class="font-bold text-slate-800">Q2 季度价值观共创营 (Day 1)</h5>
+<span class="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded font-bold uppercase">宣讲活动</span>
+</div>
+<p class="text-sm text-slate-600 mb-4">全公司12个核心部门代表参与，旨在重塑混合办公环境下的企业核心价值观。产出了5项关键准则。</p>
+<div class="flex gap-2">
+<img class="w-16 h-12 rounded object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+<img class="w-16 h-12 rounded object-cover" src="/agent-py/static/source/images/placeholder.svg"/>
+<div class="flex-1 flex items-center justify-end gap-3">
+<span class="text-xs text-slate-500 font-medium">参与人数: 156人</span>
+<span class="text-xs text-indigo-600 font-bold underline cursor-pointer">活动简报</span>
+</div>
+</div>
+</div>
+<span class="absolute -left-20 top-2 text-[10px] font-bold text-slate-400 rotate-90 origin-right">04/06</span>
+</div>
+<!-- 时间点 2 -->
+<div class="relative">
+<div class="absolute -left-8 top-1.5 w-7 h-7 bg-green-500 rounded-full border-4 border-white shadow-sm flex items-center justify-center">
+<iconify-icon class="text-xs text-white" icon="mdi:account-heart"></iconify-icon>
+</div>
+<div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+<div class="flex justify-between items-start mb-2">
+<h5 class="font-bold text-slate-800">4月员工生日会 &amp; 入职周年礼</h5>
+<span class="text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded font-bold uppercase">团队建设</span>
+</div>
+<p class="text-sm text-slate-600 mb-3">为35位本月生日及12位入职周年的伙伴送上定制化礼品，增强归属感。</p>
+<div class="flex items-center gap-3">
+<span class="text-xs text-slate-500">员工满意度评分: 4.8/5.0</span>
+<div class="flex -space-x-2">
+<img class="w-5 h-5 rounded-full border border-white" src="/agent-py/static/source/images/placeholder.svg"/>
+<img class="w-5 h-5 rounded-full border border-white" src="/agent-py/static/source/images/placeholder.svg"/>
+<img class="w-5 h-5 rounded-full border border-white" src="/agent-py/static/source/images/placeholder.svg"/>
+</div>
+</div>
+</div>
+<span class="absolute -left-20 top-2 text-[10px] font-bold text-slate-400 rotate-90 origin-right">04/08</span>
+</div>
+<!-- 时间点 3 -->
+<div class="relative">
+<div class="absolute -left-8 top-1.5 w-7 h-7 bg-blue-400 rounded-full border-4 border-white shadow-sm flex items-center justify-center">
+<iconify-icon class="text-xs text-white" icon="mdi:earth"></iconify-icon>
+</div>
+<div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+<div class="flex justify-between items-start mb-2">
+<h5 class="font-bold text-slate-800">“绿色地球”环保倡议启动仪式</h5>
+<span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded font-bold uppercase">社会责任</span>
+</div>
+<p class="text-sm text-slate-600">联合行业5家上下游合作伙伴，共同签署减塑减排协议，引发媒体广泛关注。</p>
+<div class="mt-2 text-xs text-slate-500 font-medium">覆盖媒体: 24家 | 社交媒体总声量: 125k+</div>
+</div>
+<span class="absolute -left-20 top-2 text-[10px] font-bold text-slate-400 rotate-90 origin-right">04/10</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body>
+</html>

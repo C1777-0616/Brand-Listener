@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>登录 - 竞品监控与品牌文化监听平台</title>
+<script src="https://modao.cc/agent-py/static/source/js/tailwindcss.3.4.3.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<style>
+        .login-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+<div class="max-w-5xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+<!-- 左侧宣传区 -->
+<div class="md:w-1/2 login-bg p-12 text-white flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-2 mb-8">
+<iconify-icon class="text-4xl text-white/90" icon="mdi:ShieldSearch"></iconify-icon>
+<span class="text-2xl font-bold tracking-wider">BrandListen AI</span>
+</div>
+<h1 class="text-4xl font-extrabold mb-6 leading-tight">洞察竞争态势<br/>守护品牌文化</h1>
+<p class="text-white/80 text-lg leading-relaxed mb-8">
+                    2026年度领先的品牌管理解决方案。实时监控全网竞品动向，深度监听品牌文化价值，赋能企业数据驱动决策。
+                </p>
+<ul class="space-y-4">
+<li class="flex items-center gap-3">
+<iconify-icon class="text-green-400 text-xl" icon="mdi:check-circle"></iconify-icon>
+<span>亿级数据实时处理，告警秒级响应</span>
+</li>
+<li class="flex items-center gap-3">
+<iconify-icon class="text-green-400 text-xl" icon="mdi:check-circle"></iconify-icon>
+<span>创始人IP全网影响力智能追踪</span>
+</li>
+<li class="flex items-center gap-3">
+<iconify-icon class="text-green-400 text-xl" icon="mdi:check-circle"></iconify-icon>
+<span>AI自动化生成多维度研报</span>
+</li>
+</ul>
+</div>
+<div class="mt-12 pt-8 border-t border-white/20 text-sm text-white/60 text-center md:text-left">
+                © 2026 AI产品团队. All rights reserved.
+            </div>
+</div>
+<!-- 右侧表单区 -->
+<div class="md:w-1/2 p-12 bg-white">
+<div class="max-w-sm mx-auto">
+<div class="mb-10 text-center md:text-left">
+<h2 class="text-3xl font-bold text-slate-800 mb-2">欢迎回来</h2>
+<p class="text-slate-500">请输入您的账号密码进入控制台</p>
+</div>
+<form action="index.html" class="space-y-6">
+<div>
+<label class="block text-sm font-medium text-slate-700 mb-2">工作邮箱</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+<iconify-icon icon="mdi:email-outline"></iconify-icon>
+</span>
+<input class="block w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="name@company.com" required="" type="email"/>
+</div>
+</div>
+<div>
+<div class="flex justify-between mb-2">
+<label class="block text-sm font-medium text-slate-700">密码</label>
+<a class="text-sm text-indigo-600 hover:text-indigo-500 font-medium" href="#">忘记密码?</a>
+</div>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+<iconify-icon icon="mdi:lock-outline"></iconify-icon>
+</span>
+<input class="block w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="••••••••" required="" type="password"/>
+</div>
+</div>
+<div class="flex items-center">
+<input class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" id="remember" type="checkbox"/>
+<label class="ml-2 block text-sm text-slate-600" for="remember">在此设备上保持登录</label>
+</div>
+<button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2" type="submit">
+                        立即登录
+                        <iconify-icon icon="mdi:arrow-right"></iconify-icon>
+</button>
+</form>
+<div class="mt-8">
+<div class="relative">
+<div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-100"></div></div>
+<div class="relative flex justify-center text-sm"><span class="px-2 bg-white text-slate-400">第三方授权登录</span></div>
+</div>
+<div class="mt-6 grid grid-cols-2 gap-4">
+<button class="flex items-center justify-center gap-2 py-2 px-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all text-sm font-medium text-slate-600">
+<iconify-icon class="text-lg" icon="logos:feishu"></iconify-icon>飞书
+                        </button>
+<button class="flex items-center justify-center gap-2 py-2 px-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all text-sm font-medium text-slate-600">
+<iconify-icon class="text-lg" icon="logos:dingtalk"></iconify-icon>钉钉
+                        </button>
+</div>
+</div>
+<div class="mt-10 text-center text-sm text-slate-500">
+                    还没有账号? <a class="text-indigo-600 font-bold hover:underline" href="#">申请企业试用</a>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>

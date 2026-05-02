@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>报告生成 - Brand Listener</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900 antialiased">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-slate-900 text-white fixed h-full z-20 flex flex-col">
+    <div class="p-5 border-b border-slate-800"><div class="flex items-center gap-2"><iconify-icon icon="mdi:ShieldSearch" class="text-2xl text-indigo-400"></iconify-icon><span class="font-bold text-base">BrandListen AI</span></div></div>
+    <nav class="flex-1 p-3 space-y-1 text-sm">
+      <a href="/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:view-dashboard"></iconify-icon>仪表盘首页</a>
+      <a href="/competitor" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:radar"></iconify-icon>竞品监听管理</a>
+      <a href="/culture" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:account-group"></iconify-icon>品牌文化监听</a>
+      <a href="/voc" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:comment-quote"></iconify-icon>用户之声分析</a>
+      <a href="/report" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-600 text-white font-medium transition"><iconify-icon icon="mdi:file-chart"></iconify-icon>报告生成中心</a>
+      <a href="/weibo" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:sina-weibo"></iconify-icon>微博监听</a>
+      <div class="pt-4 pb-1 px-3 text-xs text-slate-600 uppercase tracking-wider">系统管理</div>
+      <a href="/settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:cog"></iconify-icon>系统设置</a>
+    </nav>
+  </aside>
+  <!-- Main -->
+  <div class="ml-64 p-8">
+    <div class="mb-6"><h1 class="text-2xl font-bold text-slate-900">报告生成中心</h1><p class="text-sm text-slate-500 mt-1">一键生成品牌竞争态势报告</p></div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+      <!-- Left: config -->
+      <div class="xl:col-span-1 space-y-4">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <h3 class="font-semibold text-slate-900 mb-4">配置报告参数</h3>
+          <div class="space-y-4">
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">报告标题</label><input id="reportTitle" value="品牌竞争态势周报" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">报告周期</label><select id="reportPeriod" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"><option>周报</option><option>月报</option><option>季度报</option><option>专项研报</option></select></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">包含品牌</label><select class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"><option>全选</option><option>主品牌+竞品A</option><option>自定义</option></select></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">日期范围</label><div class="flex gap-2 items-center"><input type="date" value="2026-04-03" class="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" /><span class="text-slate-300">—</span><input type="date" value="2026-04-10" class="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" /></div></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-2">包含模块</label>
+              <div class="space-y-2 text-sm">
+                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1 rounded"><input type="checkbox" checked class="rounded text-indigo-600" /> 仪表盘概览</label>
+                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1 rounded"><input type="checkbox" checked class="rounded text-indigo-600" /> 竞品动态流</label>
+                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1 rounded"><input type="checkbox" checked class="rounded text-indigo-600" /> 用户之声分析</label>
+                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1 rounded"><input type="checkbox" class="rounded text-indigo-600" /> 企业文化专栏</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-3">
+          <button id="genReportBtn" class="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg shadow-lg shadow-indigo-200/50 text-sm transition">
+            <iconify-icon icon="mdi:file-pdf-box" class="text-lg"></iconify-icon>生成报告
+          </button>
+          <button class="flex-1 flex items-center justify-center gap-2 border border-indigo-200 text-indigo-600 font-medium py-2.5 rounded-lg hover:bg-indigo-50 text-sm transition">
+            <iconify-icon icon="mdi:microsoft-powerpoint" class="text-lg"></iconify-icon>导出 PPT
+          </button>
+        </div>
+
+        <!-- AI Tip -->
+        <div class="bg-indigo-900 rounded-2xl p-5 text-white">
+          <div class="flex items-start gap-3"><iconify-icon icon="mdi:lightbulb-on" class="text-amber-300 text-xl shrink-0"></iconify-icon><div><h4 class="font-medium text-sm mb-1">AI 智能摘要提示</h4><p class="text-xs text-indigo-200 leading-relaxed">检测到竞品近期有多次调价活动，建议在报告「风险预警」模块中加入价格变动趋势分析。</p></div></div>
+        </div>
+      </div>
+
+      <!-- Right: preview -->
+      <div class="xl:col-span-2">
+        <div id="reportPreview" class="min-h-[800px] bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <div class="text-sm text-slate-400 text-center py-12"><iconify-icon icon="mdi:file-document" class="text-4xl text-slate-200 mb-2 block"></iconify-icon>点击"生成报告"预览</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/api.js"></script>
+  <script>
+    async function render() {
+      const data = await fetchPipelineData();
+      const rpt = data.Reports || {};
+      const report = rpt.report || {};
+      const markdown = rpt.markdown || "";
+
+      const previewEl = document.getElementById("reportPreview");
+      if (report.title) {
+        previewEl.innerHTML = `
+          <div class="max-w-[595px] mx-auto shadow-2xl rounded-xl overflow-hidden">
+            <div class="bg-white p-10">
+              <div class="flex items-center gap-2 mb-6"><iconify-icon icon="mdi:ShieldSearch" class="text-2xl text-indigo-400"></iconify-icon><span class="font-bold text-sm text-slate-400">BrandListen AI</span></div>
+              <h1 class="text-2xl font-bold text-slate-900 mb-2">${escapeHtml(report.title || '品牌报告')}</h1>
+              <p class="text-sm text-slate-400 mb-6">生成时间: ${formatTime(report.created_at)} · 模板: ${report.template || 'weekly_digest'}</p>
+              ${report.data_summary ? `<div class="bg-slate-50 rounded-xl p-4 mb-6"><div class="grid grid-cols-2 gap-3 text-sm">${Object.entries(report.data_summary).map(([k,v]) => `<div><span class="text-slate-400">${k}:</span> <span class="font-medium">${v}</span></div>`).join("")}</div></div>` : ''}
+              <div class="border-t border-slate-100 pt-6">${(report.sections || []).map(s => `<div class="mb-6"><h2 class="text-lg font-bold text-slate-900 mb-2">${escapeHtml(s.title)}</h2><div class="text-sm text-slate-600 leading-relaxed">${s.content || ''}</div></div>`).join("")}</div>
+            </div>
+            <div class="bg-slate-50 px-10 py-3 text-xs text-slate-400 flex justify-between"><span>1 / 2</span><span>CONFIDENTIAL</span></div>
+          </div>
+        `;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      render();
+      document.getElementById("genReportBtn")?.addEventListener("click", async () => {
+        const btn = document.getElementById("genReportBtn");
+        btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> 生成中...';
+        try {
+          await runPipeline();
+          await render();
+          btn.innerHTML = '<iconify-icon icon="mdi:check-circle"></iconify-icon> 已生成';
+          setTimeout(() => { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:file-pdf-box"></iconify-icon> 生成报告'; }, 1500);
+        } catch { btn.innerHTML = '失败'; btn.disabled = false; }
+      });
+    });
+  </script>
+</body>
+</html>

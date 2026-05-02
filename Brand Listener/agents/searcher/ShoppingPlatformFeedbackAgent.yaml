@@ -1,0 +1,4 @@
+name: ShoppingPlatformFeedbackAgent
+type: agent
+inputs: [platforms]
+outputs: [ShoppingFeedback]

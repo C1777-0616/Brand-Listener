@@ -1,0 +1,4 @@
+name: SocialMediaFeedbackAgent
+type: agent
+inputs: [sources]
+outputs: [SocialMediaFeedback]

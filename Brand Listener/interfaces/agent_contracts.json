@@ -1,0 +1,20 @@
+{
+  "agents": {
+    "searcher": {
+      "BrandCultureListeningAgent": {"input": ["brandId", "sources", "frequency"], "output": ["BrandCultureEvent", "CultureSummary"]},
+      "OfficialUpdatesAgent": {"input": ["sources"], "output": ["OfficialUpdates"]},
+      "SocialMediaFeedbackAgent": {"input": ["sources"], "output": ["SocialMediaFeedback"]},
+      "ShoppingPlatformFeedbackAgent": {"input": ["platforms"], "output": ["ShoppingFeedback"]}
+    },
+    "analyst": {
+      "OtherBrandCampaignAnalystAgent": {"input": ["CompetitionData", "BrandCultureEvent", "SocialMediaFeedback"], "output": ["CompetitorCampaignAnalysis"]},
+      "UserFeedbackAnalystAgent": {"input": ["ShoppingFeedback", "SocialMediaFeedback"], "output": ["UserFeedbackInsights"]}
+    },
+    "reporter": {
+      "TemplateDrivenReportAgent": {"input": ["AnalysisResults", "Insights", "SelectedTemplate"], "output": ["ReportPDF", "ReportMarkdown", "ReportJSON"]}
+    },
+    "supervisor": {
+      "TaskDispatcherAgent": {"input": ["PendingTasks", "ResourceAvailability"], "output": ["AssignmentPlan"]}
+    }
+  }
+}
