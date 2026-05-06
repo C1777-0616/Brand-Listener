@@ -28,7 +28,7 @@ _cwd = os.getcwd()
 os.chdir(_XHS_ROOT)
 try:
     from apis.xhs_pc_apis import XHS_Apis
-    from xhs_utils.data_util import handle_user_info
+    from xhs_utils.data_util import handle_user_info, handle_note_info
 finally:
     os.chdir(_cwd)
 
@@ -192,6 +192,7 @@ class XiaohongshuUpdatesAgent:
     def _fetch_monitored_bloggers(self, since: datetime) -> List[OfficialUpdate]:
         """遍历固定博主列表，获取最新笔记。"""
         updates: List[OfficialUpdate] = []
+        max_age = datetime.now() - timedelta(days=30)
 
         for target in self.monitor_targets:
             if not target.get("enabled", True):
@@ -234,16 +235,40 @@ class XiaohongshuUpdatesAgent:
 
                 note_url = f"https://www.xiaohongshu.com/explore/{note_id}?xsec_token={note_token}&xsec_source={xsec_source}"
 
-                try:
-                    note_info = _parse_note_from_user_api(note, note_url)
-                except Exception as e:
-                    logger.debug(f"[XHS] 笔记解析失败 {note_id}: {e}")
+                # 优先调用详情 API 获取真实时间戳
+                note_info = self._fetch_note_detail(note_url, note, name)
+                if note_info is None:
+                    continue
+
+                # 30天过滤
+                published_at = _parse_upload_time(note_info.get("upload_time", ""))
+                if published_at and published_at < max_age:
+                    logger.debug(f"[XHS] 笔记 {note_id} 发布于 {published_at:%Y-%m-%d}，超过30天，跳过")
                     continue
 
                 update = self._to_official_update(note_info, f"xhs:{name}")
                 updates.append(update)
 
         return updates
+
+    def _fetch_note_detail(self, note_url: str, fallback_note: dict, blogger_name: str) -> Optional[dict]:
+        """调用详情 API 获取完整笔记信息（含时间戳），失败时回退到列表数据。"""
+        try:
+            detail_success, detail_msg, detail_json = self.api.get_note_info(
+                note_url, self.cookies_str
+            )
+            if detail_success and detail_json:
+                raw = detail_json.get("data", {}).get("items", [{}])[0]
+                raw["url"] = note_url
+                return handle_note_info(raw)
+        except Exception as e:
+            logger.debug(f"[XHS] 详情 API 失败 {note_url}: {e}")
+
+        # 回退：用列表数据（无时间戳）
+        try:
+            return _parse_note_from_user_api(fallback_note, note_url)
+        except Exception:
+            return None
 
     def _get_user_fans(self, user_id: str) -> Optional[int]:
         """获取用户粉丝数（带缓存）。"""

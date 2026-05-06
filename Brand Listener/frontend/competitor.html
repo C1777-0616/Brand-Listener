@@ -4,40 +4,25 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>竞品监听管理 - Brand Listener</title>
-<script src="https://modao.cc/agent-py/static/source/js/tailwindcss.3.4.3.js"></script>
-<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
 </head>
-<body class="bg-slate-50 font-sans text-slate-900">
-<div class="flex min-h-screen">
-<!-- 侧边栏 -->
-<aside class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col fixed h-full z-20">
-<div class="p-6 flex items-center gap-3 border-b border-slate-800">
-<iconify-icon class="text-3xl text-indigo-400" icon="mdi:ShieldSearch"></iconify-icon>
-<span class="text-xl font-bold tracking-tight text-white">BrandListen AI</span>
-</div>
-<nav class="flex-1 p-4 space-y-1">
-<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="/">
-<iconify-icon class="text-xl" icon="mdi:view-dashboard"></iconify-icon> 仪表盘首页
-</a>
-<a class="flex items-center gap-3 px-4 py-3 bg-indigo-600 rounded-lg text-white font-medium transition-all group" href="/competitor">
-<iconify-icon class="text-xl" icon="mdi:radar"></iconify-icon> 竞品监听管理
-</a>
-<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="/culture">
-<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:account-group"></iconify-icon> 品牌文化监听
-</a>
-<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="/voc">
-<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:comment-quote"></iconify-icon> 用户之声分析
-</a>
-<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="/report">
-<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:file-chart"></iconify-icon> 报告生成中心
-</a>
-<div class="pt-4 pb-2 text-xs font-semibold text-slate-500 uppercase px-4">系统管理</div>
-<a class="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all group" href="/settings">
-<iconify-icon class="text-xl group-hover:text-indigo-400" icon="mdi:cog"></iconify-icon> 系统设置
-</a>
-</nav>
-</aside>
-<main class="flex-1 ml-64 p-8">
+<body class="bg-slate-50 font-sans text-slate-900 antialiased">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-slate-900 text-white fixed h-full z-20 flex flex-col">
+    <div class="p-5 border-b border-slate-800"><div class="flex items-center gap-2"><iconify-icon icon="mdi:ShieldSearch" class="text-2xl text-indigo-400"></iconify-icon><span class="font-bold text-base">BrandListen AI</span></div></div>
+    <nav class="flex-1 p-3 space-y-1 text-sm">
+      <a href="/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:view-dashboard"></iconify-icon>仪表盘首页</a>
+      <a href="/competitor" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-600 text-white font-medium transition"><iconify-icon icon="mdi:radar"></iconify-icon>竞品监听管理</a>
+      <a href="/culture" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:account-group"></iconify-icon>品牌文化监听</a>
+      <a href="/voc" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:comment-quote"></iconify-icon>用户之声分析</a>
+      <a href="/report" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:file-chart"></iconify-icon>报告生成中心</a>
+      <div class="pt-4 pb-1 px-3 text-xs text-slate-600 uppercase tracking-wider">系统管理</div>
+      <a href="/settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"><iconify-icon icon="mdi:cog"></iconify-icon>系统设置</a>
+    </nav>
+  </aside>
+  <!-- Main -->
+  <div class="ml-64 p-8">
 <header class="flex justify-between items-center mb-8">
 <div>
 <h1 class="text-2xl font-bold text-slate-800">品牌全平台动态流</h1>
@@ -57,7 +42,10 @@
 <button class="px-6 py-3 border-b-2 border-indigo-600 text-indigo-600 font-bold whitespace-nowrap tab-btn" data-tab="feed">品牌社媒动态流</button>
 <button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap tab-btn" data-tab="ecom">电商平台配置</button>
 <button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap tab-btn" data-tab="social">社媒动态</button>
-<button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap tab-btn" data-tab="price">价格走势监控</button>
+<button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap tab-btn" data-tab="price">竞品发布节奏</button>
+<button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap tab-btn" data-tab="collab">
+<iconify-icon icon="mdi:handshake" class="mr-1"></iconify-icon>品牌联动
+</button>
 </div>
 <!-- 过滤器 -->
 <div id="filterBar" class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-8 flex flex-wrap gap-4 items-center">
@@ -97,7 +85,7 @@
 <div class="p-6">
 <div class="flex items-start gap-4">
 <div class="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border border-slate-100">
-<img alt="Product" class="w-full h-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/7875ad7b03ed4edbb4bbc3bf883eaf1a.jpg"/>
+<img alt="Product" class="w-full h-full object-cover" src="https://placehold.co/80x80/e2e8f0/94a3b8?text=X"/>
 </div>
 <div class="flex-1">
 <div class="flex justify-between items-start mb-2">
@@ -167,7 +155,7 @@
 <div class="p-6 border-l-4 border-indigo-600">
 <div class="flex items-start gap-4">
 <div class="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border border-slate-100">
-<img alt="New Launch" class="w-full h-full object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/8cddcd560fbc403bbc8b3b8b6f24f032.jpg"/>
+<img alt="New Launch" class="w-full h-full object-cover" src="https://placehold.co/80x80/e2e8f0/94a3b8?text=X"/>
 </div>
 <div class="flex-1">
 <div class="flex justify-between items-start mb-2">
@@ -183,9 +171,9 @@
 <p class="text-slate-600 text-sm mb-4">竞品C正式发布其旗舰级AI中控系统。该产品采用了最新的[大模型内核]，支持多模态交互。天猫预售开启1小时内，订单量已突破5,000台。对我方核心产品[智能家庭管家]构成直接威胁。</p>
 <div class="flex items-center gap-4">
 <div class="flex -space-x-2">
-<img alt="U1" class="w-6 h-6 rounded-full border-2 border-white" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/c669ae459d7d4c17bf6d596f511a1d4b.jpg"/>
-<img alt="U2" class="w-6 h-6 rounded-full border-2 border-white" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/79f1cb0abf3c452d8200b28d61cb1a9b.jpg"/>
-<img alt="U3" class="w-6 h-6 rounded-full border-2 border-white" src="https://modao.cc/agent-py/media/generated_images/2026-04-10/a18ea31332c448baa08cabe0f28a15ef.jpg"/>
+<img alt="U1" class="w-6 h-6 rounded-full border-2 border-white" src="https://placehold.co/80x80/e2e8f0/94a3b8?text=X"/>
+<img alt="U2" class="w-6 h-6 rounded-full border-2 border-white" src="https://placehold.co/80x80/e2e8f0/94a3b8?text=X"/>
+<img alt="U3" class="w-6 h-6 rounded-full border-2 border-white" src="https://placehold.co/80x80/e2e8f0/94a3b8?text=X"/>
 <div class="w-6 h-6 rounded-full bg-slate-100 border-2 border-white text-[8px] flex items-center justify-center font-bold text-slate-500">+12</div>
 </div>
 <span class="text-xs text-slate-400">已有15位分析师对此动态标注"高关注"</span>
@@ -199,24 +187,26 @@
 </div>
 </div>
 <div id="dynamicFeed"></div>
-<!-- 加载更多 --></div>
 <!-- 电商平台配置 -->
-<div id="ecomSection" class="hidden">
+<div id="ecomSection" style="display:none">
   <div id="ecomContent"></div>
 </div>
 <!-- 社媒动态 -->
-<div id="socialSection" class="hidden">
+<div id="socialSection" style="display:none">
   <div id="socialContent"></div>
 </div>
 <!-- 价格走势监控 -->
-<div id="priceSection" class="hidden">
+<div id="priceSection" style="display:none">
   <div id="priceContent"></div>
+</div>
+<!-- 品牌联动 -->
+<div id="collabSection" style="display:none;">
+  <div id="collabContent"></div>
 </div>
 <!-- 加载更多 -->
 <div class="mt-8 text-center">
 <button class="px-6 py-2 bg-white border border-slate-200 rounded-full text-sm text-slate-600 hover:bg-slate-50 transition-all">加载更多历史动态...</button>
 </div>
-</main>
 </div>
 <script>
   // Tab switching
@@ -230,14 +220,31 @@
       btn.classList.remove('border-transparent', 'text-slate-500');
       btn.classList.add('border-indigo-600', 'text-indigo-600', 'font-bold');
       activeTab = btn.dataset.tab;
+      // 筛选栏：feed 和 collab tab 都显示
+      document.getElementById('filterBar').style.display = (activeTab === 'feed' || activeTab === 'collab') ? 'flex' : 'none';
+      // 联动 tab 时，类型下拉替换为联动类型选项
+      const typeSelect = document.getElementById('typeSelect');
+      if (activeTab === 'collab') {
+        typeSelect.innerHTML = '<option value="">全部联动类型</option>'
+          + ['渠道合作','展会合作','IP联名','明星合作','媒体合作','公益合作','跨界品牌']
+            .map(t => '<option value="' + t + '">' + t + '</option>').join('');
+        collabDisplayCount = 30;
+      } else if (activeTab === 'feed') {
+        // 恢复内容类型选项
+        const typeSet = new Set();
+        allEntries.forEach(u => typeSet.add(u.update_type || 'brand_content'));
+        typeSelect.innerHTML = '<option value="">全部类型</option>';
+        Object.entries(TYPE_LABELS).forEach(([key, label]) => {
+          if (typeSet.has(key)) typeSelect.innerHTML += '<option value="' + key + '">' + label + '</option>';
+        });
+      }
       renderFeed();
-      // 过滤器只在 feed tab 显示
-      document.getElementById('filterBar').style.display = activeTab === 'feed' ? 'flex' : 'none';
     });
   });
 
   // Feed data
   let allEntries = [];
+  let collabDisplayCount = 30;
 
   // 去掉 feed_title 中的平台后缀，提取统一品牌名
   function extractBrandName(raw) {
@@ -305,6 +312,7 @@
     const desc = escHtml((u.content || '').replace(/<[^>]+>/g,'').slice(0, 150));
     const time = u.published_at ? new Date(u.published_at).toLocaleString('zh-CN') : '';
     const author = escHtml(u.engagement_metrics?.feed_title || u.engagement_metrics?.nickname || u.engagement_metrics?.author || '');
+    const brandName = extractBrandName(u.engagement_metrics?.feed_title || u.engagement_metrics?.nickname || u.engagement_metrics?.author || '');
     const thumb = u.thumbnail_url || (u.media_urls && u.media_urls[0]) || '';
     const srcUrl = u.url || u.source_url || '';
     const typeKey = u.update_type || 'brand_content';
@@ -336,13 +344,15 @@
                   </div>
                   <h3 class="text-lg font-bold text-slate-800">${title}</h3>
                   ${(u.engagement_metrics?.ai_tags || []).length ? `<div class="flex flex-wrap gap-1 mt-1 mb-1">${(u.engagement_metrics.ai_tags).map(t => `<span class="px-2 py-0.5 bg-violet-50 text-violet-600 text-[10px] font-semibold rounded-full border border-violet-100">#${escHtml(t)}</span>`).join('')}</div>` : ''}
+                  ${(u.engagement_metrics?.collab_partners || []).length ? `<div class="flex flex-wrap gap-1 mt-0.5 mb-0.5"><span class="text-[10px] text-slate-400 font-medium mr-1">联动类型：</span>${(u.engagement_metrics.collab_partners).map(p => `<span class="px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold rounded-full border border-amber-200">${escHtml(p)}</span>`).join('')}</div>` : ''}
+                  ${(u.engagement_metrics?.collab_entity_names || []).length ? `<div class="flex flex-wrap gap-1 mt-0.5 mb-0.5"><span class="text-[10px] text-slate-400 font-medium mr-1">合作方：</span>${(u.engagement_metrics.collab_entity_names).map(e => `<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-semibold rounded-full border border-emerald-200">${escHtml(e)}</span>`).join('')}</div>` : ''}
                 </div>
                 <span class="text-sm text-slate-400 font-mono whitespace-nowrap ml-4">${time}</span>
               </div>
               <p class="text-slate-600 text-sm mb-4">${desc}</p>
               <div class="flex items-center gap-6">
                 <div class="ml-auto flex gap-2">
-                  <button class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100">生成对标建议</button>
+                  <button onclick="showInsight('${escHtml(brandName)}')" class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100">生成对标建议</button>
                   ${srcUrl ? `<a href="${escHtml(srcUrl)}" target="_blank" rel="noopener" class="px-3 py-1 border border-slate-200 text-slate-600 text-xs font-bold rounded hover:bg-slate-50">查看原文</a>` : ''}
                 </div>
               </div>
@@ -359,15 +369,17 @@
     const ecomSec = document.getElementById('ecomSection');
     const socialSec = document.getElementById('socialSection');
     const priceSec = document.getElementById('priceSection');
+    const collabSec = document.getElementById('collabSection');
 
-    [feedList, dynamicFeed, ecomSec, socialSec, priceSec].forEach(el => {
+    [feedList, dynamicFeed, ecomSec, socialSec, priceSec, collabSec].forEach(el => {
       if (!el) return;
     });
-    feedList.classList.toggle('hidden', activeTab !== 'feed');
-    dynamicFeed.classList.toggle('hidden', activeTab !== 'feed');
-    ecomSec.classList.toggle('hidden', activeTab !== 'ecom');
-    socialSec.classList.toggle('hidden', activeTab !== 'social');
-    priceSec.classList.toggle('hidden', activeTab !== 'price');
+    feedList.style.display = activeTab === 'feed' ? '' : 'none';
+    dynamicFeed.style.display = activeTab === 'feed' ? '' : 'none';
+    ecomSec.style.display = activeTab === 'ecom' ? '' : 'none';
+    socialSec.style.display = activeTab === 'social' ? '' : 'none';
+    priceSec.style.display = activeTab === 'price' ? '' : 'none';
+    collabSec.style.display = activeTab === 'collab' ? '' : 'none';
 
     if (activeTab === 'feed') {
       renderFeedTab();
@@ -377,6 +389,8 @@
       renderSocialTab();
     } else if (activeTab === 'price') {
       renderPriceTab();
+    } else if (activeTab === 'collab') {
+      renderCollabTab();
     }
   }
 
@@ -581,6 +595,190 @@
     el.innerHTML = html;
   }
 
+  // ── Collab tab: 品牌联动洞察 ──
+  // 使用内联样式，因为 Tailwind CDN 不会为动态生成的元素生成 CSS
+  function renderCollabTab() {
+    try {
+    const el = document.getElementById('collabContent');
+    if (!el) return;
+    if (allEntries.length === 0) {
+      el.innerHTML = '<div style="padding:80px 0;text-align:center;color:#94a3b8;font-size:14px;">暂无数据</div>';
+      return;
+    }
+
+    // ── 应用筛选 ──
+    const platform = document.getElementById('platformSelect').value;
+    const brand = document.getElementById('brandSelect').value;
+    const collabType = document.getElementById('typeSelect').value;
+    const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+
+    let collabEntries = allEntries.filter(e => (e.engagement_metrics?.collab_partners || []).length > 0);
+    collabEntries = collabEntries.filter(e => {
+      if (!matchPlatform(e.platform, platform)) return false;
+      if (brand) {
+        const raw = e.engagement_metrics?.feed_title || e.engagement_metrics?.nickname || e.engagement_metrics?.author || '';
+        if (extractBrandName(raw) !== brand) return false;
+      }
+      if (collabType) {
+        if (!(e.engagement_metrics?.collab_partners || []).includes(collabType)) return false;
+      }
+      if (keyword) {
+        const searchText = ((e.title || '') + ' ' + (e.content || '')).toLowerCase();
+        if (!searchText.includes(keyword)) return false;
+      }
+      return true;
+    });
+
+    if (collabEntries.length === 0) {
+      el.innerHTML = '<div style="padding:80px 0;text-align:center;color:#94a3b8;font-size:14px;">无匹配的联动数据</div>';
+      return;
+    }
+
+    const brandCollabs = {};
+    const typeStats = {};
+    const partnerStats = {};
+
+    collabEntries.forEach(e => {
+      const raw = e.engagement_metrics?.feed_title || e.engagement_metrics?.nickname || e.engagement_metrics?.author || '';
+      const brand = extractBrandName(raw) || '(未知品牌)';
+      const partners = e.engagement_metrics?.collab_partners || [];
+      if (!brandCollabs[brand]) brandCollabs[brand] = { total: 0, partners: new Set() };
+      brandCollabs[brand].total++;
+      partners.forEach(p => {
+        brandCollabs[brand].partners.add(p);
+        partnerStats[p] = (partnerStats[p] || 0) + 1;
+        if (!typeStats[p]) typeStats[p] = { count: 0, brands: new Set() };
+        typeStats[p].count++;
+        typeStats[p].brands.add(brand);
+      });
+    });
+
+    const barColors = ['#6366f1', '#f43f5e', '#f59e0b', '#10b981', '#0ea5e9', '#8b5cf6', '#14b8a6', '#f97316'];
+    const brandNames = Object.keys(brandCollabs).sort();
+    const collabTypes = Object.entries(typeStats).sort((a, b) => b[1].count - a[1].count);
+
+    let html = '';
+
+    // ── 顶部统计卡片 ──
+    html += '<div style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;">';
+    [
+      { v: collabEntries.length, l: '联动帖总数', c: '#1e293b' },
+      { v: brandNames.length, l: '参与品牌数', c: '#6366f1' },
+      { v: collabTypes.length, l: '联动类型数', c: '#f59e0b' },
+      { v: Object.keys(partnerStats).length, l: '合作方总数', c: '#10b981' },
+    ].forEach(s => {
+      html += '<div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:20px;flex:1 1 0;min-width:140px;">'
+        + '<div style="font-size:32px;font-weight:700;color:' + s.c + ';">' + s.v + '</div>'
+        + '<div style="font-size:13px;color:#94a3b8;margin-top:4px;">' + s.l + '</div></div>';
+    });
+    html += '</div>';
+
+    // ── 按品牌统计面板 ──
+    html += '<div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:24px;margin-bottom:24px;">'
+      + '<div style="font-size:18px;font-weight:600;color:#0f172a;margin-bottom:4px;">品牌联动总览</div>'
+      + '<div style="font-size:13px;color:#94a3b8;margin-bottom:24px;">各品牌的联动活跃度与合作方分布</div>';
+
+    brandNames.forEach((name, idx) => {
+      const info = brandCollabs[name];
+      const color = barColors[idx % barColors.length];
+      const partners = [...info.partners].sort();
+      const barWidth = Math.min(100, Math.round(info.total / collabEntries.length * 100));
+      const border = idx < brandNames.length - 1 ? 'border-bottom:1px solid #f1f5f9;padding-bottom:20px;margin-bottom:20px;' : '';
+      html += '<div style="' + border + '">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+        + '<div style="display:flex;align-items:center;gap:10px;">'
+        + '<span style="width:12px;height:12px;border-radius:50%;background:' + color + ';display:inline-block;flex-shrink:0;"></span>'
+        + '<span style="font-weight:600;color:#1e293b;font-size:14px;">' + escHtml(name) + '</span>'
+        + '<span style="font-size:11px;padding:2px 8px;background:#f1f5f9;color:#475569;border-radius:9999px;">' + info.total + ' 条联动</span>'
+        + '</div><span style="font-size:12px;color:#94a3b8;">' + partners.length + ' 个合作方</span></div>'
+        + '<div style="width:100%;background:#f1f5f9;border-radius:9999px;height:8px;margin-bottom:12px;">'
+        + '<div style="width:' + barWidth + '%;height:8px;border-radius:9999px;background:' + color + ';"></div></div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:6px;padding-left:22px;">'
+        + partners.map(p => '<span style="display:inline-flex;align-items:center;padding:2px 8px;background:#fffbeb;color:#b45309;font-size:11px;font-weight:500;border-radius:9999px;border:1px solid #fde68a;">' + escHtml(p) + '<span style="color:#fbbf24;margin-left:4px;">' + partnerStats[p] + '</span></span>').join('')
+        + '</div></div>';
+    });
+    html += '</div>';
+
+    // ── 按联动类型统计 ──
+    html += '<div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:24px;margin-bottom:24px;">'
+      + '<div style="font-size:18px;font-weight:600;color:#0f172a;margin-bottom:4px;">按联动类型分布</div>'
+      + '<div style="font-size:13px;color:#94a3b8;margin-bottom:24px;">不同联动合作类型的数量与品牌覆盖</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:16px;">';
+
+    const typeIconMap = {
+      '渠道合作': 'mdi:store', '展会合作': 'mdi:calendar-star', 'IP联名': 'mdi:gamepad-variant',
+      '明星合作': 'mdi:star', '媒体合作': 'mdi:television-classic', '公益合作': 'mdi:heart',
+      '跨界品牌': 'mdi:bottle-soda-classic-outline'
+    };
+
+    collabTypes.forEach(([typeName, info]) => {
+      const icon = typeIconMap[typeName] || 'mdi:link-variant';
+      html += '<div style="flex:1 1 160px;max-width:220px;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+        + '<div style="width:32px;height:32px;border-radius:8px;background:#fffbeb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+        + '<iconify-icon icon="' + icon + '" style="color:#d97706;font-size:18px;"></iconify-icon></div>'
+        + '<span style="font-weight:500;color:#1e293b;font-size:14px;">' + escHtml(typeName) + '</span></div>'
+        + '<div style="font-size:24px;font-weight:700;color:#0f172a;margin-bottom:4px;">' + info.count + '</div>'
+        + '<div style="font-size:12px;color:#94a3b8;">' + [...info.brands].join('、') + ' 参与</div></div>';
+    });
+    html += '</div></div>';
+
+    // ── 联动条目 Feed 流 ──
+    html += '<div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:24px;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">'
+      + '<div style="font-size:18px;font-weight:600;color:#0f172a;">联动动态 <span style="font-size:13px;font-weight:400;color:#94a3b8;">(' + collabEntries.length + ' 条)</span></div></div>';
+
+    collabEntries.sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0));
+    const visibleEntries = collabEntries.slice(0, collabDisplayCount);
+    visibleEntries.forEach((u, i) => {
+      const title = escHtml(u.title || (u.content || '').replace(/<[^>]+>/g, '').slice(0, 50));
+      const desc = escHtml((u.content || '').replace(/<[^>]+>/g, '').slice(0, 100));
+      const time = u.published_at ? new Date(u.published_at).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      const raw = u.engagement_metrics?.feed_title || u.engagement_metrics?.nickname || u.engagement_metrics?.author || '';
+      const brand = escHtml(extractBrandName(raw));
+      const partners = (u.engagement_metrics?.collab_partners || []).map(p => '<span style="display:inline-block;padding:1px 6px;background:#fffbeb;color:#b45309;font-size:10px;font-weight:600;border-radius:4px;border:1px solid #fde68a;">' + escHtml(p) + '</span>').join(' ');
+      const entities = (u.engagement_metrics?.collab_entity_names || []).map(e => '<span style="display:inline-block;padding:1px 6px;background:#ecfdf5;color:#047857;font-size:10px;font-weight:600;border-radius:4px;border:1px solid #a7f3d0;">' + escHtml(e) + '</span>').join(' ');
+      const tags = (u.engagement_metrics?.ai_tags || []).filter(t => t !== '品牌联动').map(t => '<span style="display:inline-block;padding:1px 6px;background:#f5f3ff;color:#7c3aed;font-size:10px;font-weight:500;border-radius:9999px;">#' + escHtml(t) + '</span>').join(' ');
+      const isXHS = u.platform === 'xiaohongshu';
+      const isBili = u.platform === 'bilibili';
+      const platLabel = isXHS ? '小红书' : isBili ? 'bilibili' : '微博';
+      const divider = i < visibleEntries.length - 1 ? 'border-bottom:1px solid #f1f5f9;' : '';
+
+      html += '<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;' + divider + '">'
+        + '<div style="flex-shrink:0;width:28px;height:28px;border-radius:8px;background:' + (i < 3 ? '#fef3c7' : '#f1f5f9') + ';color:' + (i < 3 ? '#d97706' : '#94a3b8') + ';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">' + (i + 1) + '</div>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">'
+        + (brand ? '<span style="font-size:12px;font-weight:500;color:#334155;">' + brand + '</span>' : '')
+        + '<span style="padding:1px 6px;font-size:10px;font-weight:700;border-radius:4px;background:#fff1f2;color:#e11d48;">' + platLabel + '</span>'
+        + '<span style="font-size:12px;color:#94a3b8;">' + time + '</span></div>'
+        + '<p style="font-size:13px;font-weight:500;color:#1e293b;margin-bottom:4px;">' + (title || desc) + '</p>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">'
+        + '<span style="font-size:10px;color:#94a3b8;margin-right:4px;">类型：</span>' + partners
+        + (entities ? '<span style="font-size:10px;color:#94a3b8;margin-left:8px;margin-right:4px;">合作方：</span>' + entities : '')
+        + (tags ? '<span style="margin:0 4px;color:#cbd5e1;">|</span>' + tags : '')
+        + '</div></div>'
+        + (u.url ? '<a href="' + escHtml(u.url) + '" target="_blank" rel="noopener" style="color:#6366f1;font-size:12px;flex-shrink:0;margin-top:8px;text-decoration:none;">查看原文</a>' : '')
+        + '</div>';
+    });
+
+    // 加载更多按钮
+    if (collabEntries.length > collabDisplayCount) {
+      html += '<div style="text-align:center;padding:20px;">'
+        + '<button onclick="loadMoreCollab()" style="padding:8px 24px;background:#fff;border:1px solid #e2e8f0;border-radius:9999px;font-size:13px;color:#64748b;cursor:pointer;">'
+        + '加载更多 (' + (collabEntries.length - collabDisplayCount) + ' 条剩余)</button></div>';
+    }
+
+    html += '</div>';
+
+    el.innerHTML = html;
+  } catch(err) { el.innerHTML = '<div style="padding:80px 0;text-align:center;color:#f87171;font-size:14px;">渲染错误</div>'; }
+  }
+
+  function loadMoreCollab() {
+    collabDisplayCount += 30;
+    renderCollabTab();
+  }
+
   async function loadFeed() {
     try {
       const resp = await fetch('/api/data/latest');
@@ -623,6 +821,148 @@
     renderFeed();
   }
 
+  // ── 竞品对标洞察面板 ──
+
+  async function showInsight(brand) {
+    if (!brand) return;
+    const panel = document.getElementById('insightPanel');
+    const overlay = document.getElementById('insightOverlay');
+    const body = document.getElementById('insightBody');
+    panel.style.display = 'flex';
+    overlay.style.display = 'block';
+    body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#94a3b8;">加载中...</div>';
+
+    try {
+      const resp = await fetch('/api/insights/competitor?brand=' + encodeURIComponent(brand));
+      const data = await resp.json();
+      if (data.error) {
+        body.innerHTML = '<div style="padding:40px;text-align:center;color:#f87171;">' + escHtml(data.error) + '</div>';
+        return;
+      }
+      renderInsight(body, data, brand);
+    } catch(e) {
+      body.innerHTML = '<div style="padding:40px;text-align:center;color:#f87171;">请求失败：' + escHtml(e.message) + '</div>';
+    }
+  }
+
+  function closeInsight() {
+    document.getElementById('insightPanel').style.display = 'none';
+    document.getElementById('insightOverlay').style.display = 'none';
+  }
+
+  function renderInsight(container, data, brand) {
+    const target = data.brands && data.brands[brand];
+    if (!target) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:#94a3b8;">未找到品牌「' + escHtml(brand) + '」的分析数据</div>';
+      return;
+    }
+
+    let html = '';
+
+    // 品牌概览卡片
+    html += '<div style="margin-bottom:20px;">'
+      + '<div style="font-size:20px;font-weight:700;color:#0f172a;margin-bottom:4px;">' + escHtml(brand) + '</div>'
+      + '<div style="font-size:13px;color:#94a3b8;">竞品内容策略分析</div></div>';
+
+    // 核心指标
+    html += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;">';
+    const metrics = [
+      { v: target.total_posts, l: '总帖数', c: '#6366f1' },
+      { v: target.avg_posts_per_day, l: '日均发布', c: '#0ea5e9' },
+      { v: Object.keys(target.platforms).length, l: '覆盖平台', c: '#10b981' },
+      { v: target.collab_count, l: '联动帖数', c: '#f59e0b' },
+    ];
+    metrics.forEach(m => {
+      html += '<div style="background:#f8fafc;border-radius:10px;padding:14px;text-align:center;">'
+        + '<div style="font-size:24px;font-weight:700;color:' + m.c + ';">' + m.v + '</div>'
+        + '<div style="font-size:12px;color:#94a3b8;margin-top:2px;">' + m.l + '</div></div>';
+    });
+    html += '</div>';
+
+    // 日期范围
+    if (target.date_range && target.date_range.from) {
+      html += '<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:16px;">'
+        + '<div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:6px;">数据时间范围</div>'
+        + '<div style="font-size:12px;color:#64748b;">' + escHtml(target.date_range.from) + ' ~ ' + escHtml(target.date_range.to) + '（' + target.date_range.days + ' 天）</div></div>';
+    }
+
+    // 平台分布
+    if (Object.keys(target.platforms).length) {
+      const platLabels = { weibo: '微博', xiaohongshu: '小红书', bilibili: 'bilibili', douyin: '抖音', jd: '京东', taobao: '淘宝' };
+      const maxPlat = Math.max(...Object.values(target.platforms));
+      html += '<div style="margin-bottom:16px;">'
+        + '<div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:10px;">平台分布</div>';
+      Object.entries(target.platforms).forEach(([p, count]) => {
+        const pct = Math.round(count / target.total_posts * 100);
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+          + '<span style="width:60px;font-size:12px;color:#64748b;text-align:right;">' + (platLabels[p] || p) + '</span>'
+          + '<div style="flex:1;background:#e2e8f0;border-radius:4px;height:20px;overflow:hidden;">'
+          + '<div style="width:' + pct + '%;height:100%;background:#6366f1;border-radius:4px;min-width:2px;"></div></div>'
+          + '<span style="width:40px;font-size:12px;color:#475569;">' + count + '条</span></div>';
+      });
+      html += '</div>';
+    }
+
+    // 内容类型分布
+    if (Object.keys(target.content_types).length) {
+      const typeLabels = { new_product: '新品发布', promotion: '促销活动', kol_collab: '代言合作', user_engagement: '用户互动', offline_event: '线下活动', corporate_news: '企业资讯', product_content: '产品种草', brand_content: '品牌内容' };
+      html += '<div style="margin-bottom:16px;">'
+        + '<div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:10px;">内容类型</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      Object.entries(target.content_types).sort((a, b) => b[1] - a[1]).forEach(([t, count]) => {
+        html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#f1f5f9;border-radius:6px;font-size:12px;color:#475569;">'
+          + (typeLabels[t] || t) + '<span style="font-weight:600;color:#6366f1;">' + count + '</span></span>';
+      });
+      html += '</div></div>';
+    }
+
+    // 热门标签
+    if (target.top_tags && target.top_tags.length) {
+      html += '<div style="margin-bottom:16px;">'
+        + '<div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:10px;">热门标签 Top 10</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      target.top_tags.forEach(t => {
+        html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#f5f3ff;color:#7c3aed;font-size:11px;font-weight:500;border-radius:9999px;border:1px solid #e9d5ff;">#'
+          + escHtml(t.tag) + '<span style="font-weight:600;">' + t.count + '</span></span>';
+      });
+      html += '</div></div>';
+    }
+
+    // 合作方
+    if (Object.keys(target.collab_types).length) {
+      html += '<div style="margin-bottom:16px;">'
+        + '<div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:10px;">联动合作方</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      Object.entries(target.collab_types).sort((a, b) => b[1] - a[1]).forEach(([partner, count]) => {
+        html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#fffbeb;color:#b45309;font-size:11px;font-weight:500;border-radius:9999px;border:1px solid #fde68a;">'
+          + escHtml(partner) + '<span style="font-weight:600;">' + count + '</span></span>';
+      });
+      html += '</div></div>';
+    }
+
+    // 跨品牌对比
+    if (data.comparison && data.comparison.length) {
+      html += '<div style="margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0;">'
+        + '<div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:12px;">竞品横向对比</div>';
+      data.comparison.forEach(c => {
+        html += '<div style="margin-bottom:12px;">'
+          + '<div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;">' + escHtml(c.dimension) + '（领先：' + escHtml(c.leader) + '）</div>'
+          + '<div style="display:flex;flex-direction:column;gap:4px;">';
+        c.ranking.forEach((r, i) => {
+          const isTarget = r.brand === brand;
+          html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:6px;background:' + (isTarget ? '#eef2ff' : 'transparent') + ';">'
+            + '<span style="width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:' + (i === 0 ? '#6366f1' : i === 1 ? '#94a3b8' : '#cbd5e1') + ';">' + (i + 1) + '</span>'
+            + '<span style="font-size:12px;color:#334155;font-weight:' + (isTarget ? '600' : '400') + ';">' + escHtml(r.brand) + '</span>'
+            + '<span style="font-size:12px;color:#94a3b8;margin-left:auto;">' + escHtml(r.value) + '</span></div>';
+        });
+        html += '</div></div>';
+      });
+      html += '</div>';
+    }
+
+    container.innerHTML = html;
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('platformSelect').addEventListener('change', renderFeed);
     document.getElementById('brandSelect').addEventListener('change', renderFeed);
@@ -631,5 +971,15 @@
     loadFeed();
   });
 </script>
+
+<!-- 竞品对标洞察滑出面板 -->
+<div id="insightOverlay" onclick="closeInsight()" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:49;"></div>
+<div id="insightPanel" style="display:none;position:fixed;top:0;right:0;bottom:0;width:420px;max-width:90vw;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,0.12);z-index:50;flex-direction:column;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e2e8f0;flex-shrink:0;">
+    <span style="font-size:16px;font-weight:700;color:#0f172a;">竞品对标洞察</span>
+    <button onclick="closeInsight()" style="width:32px;height:32px;border-radius:8px;border:none;background:#f1f5f9;cursor:pointer;font-size:18px;color:#64748b;display:flex;align-items:center;justify-content:center;">×</button>
+  </div>
+  <div id="insightBody" style="flex:1;overflow-y:auto;padding:20px;"></div>
+</div>
 </body>
 </html>

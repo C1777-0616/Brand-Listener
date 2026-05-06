@@ -43,19 +43,29 @@ app = FastAPI(title="Brand Listener API", version="0.1.0")
 # ── Background pipeline runner ──
 
 def _retag_missing():
-    """对 entries_store 里缺少 ai_tags 的条目补打标签，并持久化。"""
+    """对 entries_store 里缺少 ai_tags 或 collab_entity_names 的条目补打标签，并持久化。"""
     updates = list(entries_store.values())
-    missing = [u for u in updates if not (u.get("engagement_metrics") or {}).get("ai_tags")]
-    if not missing:
-        return
-    logger.info(f"Retagging {len(missing)} entries missing ai_tags...")
     tagger = ContentTaggingAgent()
-    tagger.tag_updates(missing)
-    try:
-        with open(_STORE_PATH, "w", encoding="utf-8") as f:
-            json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
-    except Exception as e:
-        logger.warning(f"Could not save entries_store after retag: {e}")
+    changed = False
+
+    # 补打缺失的 ai_tags
+    missing_tags = [u for u in updates if not (u.get("engagement_metrics") or {}).get("ai_tags")]
+    if missing_tags:
+        logger.info(f"Retagging {len(missing_tags)} entries missing ai_tags...")
+        tagger.tag_updates(missing_tags)
+        changed = True
+
+    # 补打缺失的 collab_entity_names
+    retagged = tagger.retag_collab_entities(updates)
+    if retagged:
+        changed = True
+
+    if changed:
+        try:
+            with open(_STORE_PATH, "w", encoding="utf-8") as f:
+                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+        except Exception as e:
+            logger.warning(f"Could not save entries_store after retag: {e}")
 
 
 def _run_pipeline_background(force: bool = False):
@@ -95,14 +105,22 @@ def _run_pipeline_background(force: bool = False):
                 json.dump(latest_result, f, ensure_ascii=False, default=str)
         except Exception as e:
             logger.warning(f"Could not save latest_result to disk: {e}")
-        # 增量合并新条目到 entries_store，已存在的 key 自动跳过
+        # 增量合并新条目到 entries_store，已存在条目在新数据有标签时覆盖
         new_updates = result.get("OfficialUpdates", {}).get("updates", [])
         added = 0
+        updated = 0
         for u in new_updates:
             key = f"{u.get('source_url', '')}:{u.get('id', '')}"
             if key and key not in entries_store:
                 entries_store[key] = u
                 added += 1
+            elif key:
+                old_tags = (entries_store[key].get("engagement_metrics") or {}).get("ai_tags")
+                new_tags = (u.get("engagement_metrics") or {}).get("ai_tags")
+                if new_tags and not old_tags:
+                    entries_store[key] = u
+                    updated += 1
+        logger.info(f"entries_store: +{added} new, +{updated} updated, total {len(entries_store)}")
         logger.info(f"entries_store: +{added} new, total {len(entries_store)}")
         try:
             with open(_STORE_PATH, "w", encoding="utf-8") as f:
@@ -378,7 +396,18 @@ async def clear_entries():
     entries_store.clear()
     if _STORE_PATH.exists():
         _STORE_PATH.unlink()
-    return {"success": True, "message": f"entries_store cleared"}
+    return {"success": True, "message": "entries_store cleared"}
+
+
+@app.get("/api/insights/competitor")
+async def competitor_insights(brand: str = ""):
+    """Generate competitive insights from entries_store."""
+    from src.agents.analyst.competitor_insight_agent import analyze
+    entries = list(entries_store.values())
+    if not entries:
+        return {"error": "No data available. Run pipeline first."}
+    result = analyze(entries, target_brand=brand or None)
+    return result
 
 
 @app.post("/api/exports/upload")
