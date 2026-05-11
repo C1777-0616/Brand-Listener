@@ -407,6 +407,8 @@
     }
     document.querySelectorAll('.mock-card').forEach(el => el.style.display = 'none');
     const filtered = allEntries.filter(e => {
+      // 排除小红书关键词搜索数据（仅在社媒动态Tab显示）
+      if ((e.source_url || '').includes('xhs:keyword:')) return false;
       if (!matchPlatform(e.platform, platform)) return false;
       if (brand) {
         const raw = e.engagement_metrics?.feed_title || e.engagement_metrics?.nickname || e.engagement_metrics?.author || '';
@@ -434,101 +436,235 @@
   // ── Ecom tab: 品牌×平台矩阵 ──
   function renderEcomTab() {
     const el = document.getElementById('ecomContent');
-    if (allEntries.length === 0) {
-      el.innerHTML = '<div class="py-20 text-center"><p class="text-slate-400">暂无数据，请先触发 pipeline 获取数据</p></div>';
-      return;
+    el.innerHTML = '<div class="py-20 text-center"><p class="text-slate-400">电商平台配置功能待开发</p></div>';
+  }
+
+  // ── Social tab: 小红书关键词搜索 + 价值评分 + 关键词提取 ──
+  const SOCIAL_KEYWORDS = ['牙膏', '牙刷', '电动牙刷', '口腔健康', '牙齿美白'];
+  let socialSearching = false;
+  let socialSearched = false;
+  let socialSearchError = '';
+  let socialTierFilter = '';
+  let socialSortBy = 'value';
+  let socialLastSearchTime = null;
+
+  function getSocialItems() {
+    return allEntries.filter(e => (e.source_url || '').includes('xhs:keyword:'));
+  }
+
+  function renderSocialTab() {
+    const el = document.getElementById('socialContent');
+    let items = getSocialItems();
+
+    if (socialTierFilter) {
+      items = items.filter(e => (e.engagement_metrics || {}).value_tier === socialTierFilter);
     }
-    // 统计每个品牌在每个平台的条目数
-    const platformLabels = { weibo: '微博', xiaohongshu: '小红书', bilibili: 'bilibili', douyin: '抖音', jd: '京东', taobao: '天猫', wechat: '微信' };
-    const brandPlatform = {};
-    allEntries.forEach(e => {
-      const raw = e.engagement_metrics?.feed_title || e.engagement_metrics?.nickname || e.engagement_metrics?.author || '';
-      const brand = extractBrandName(raw) || '(未知品牌)';
-      if (!brandPlatform[brand]) brandPlatform[brand] = {};
-      brandPlatform[brand][e.platform] = (brandPlatform[brand][e.platform] || 0) + 1;
-    });
-    // 收集所有出现的平台
-    const allPlatforms = [...new Set(allEntries.map(e => e.platform))];
-    const brands = Object.keys(brandPlatform).sort();
-    if (brands.length === 0) {
-      el.innerHTML = '<div class="py-20 text-center"><p class="text-slate-400">未识别到品牌数据</p></div>';
-      return;
-    }
-    let html = `
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <h3 class="font-semibold text-slate-900 mb-4">品牌×平台监控矩阵</h3>
-        <p class="text-sm text-slate-500 mb-6">展示各竞品品牌在不同社媒平台的动态数量分布</p>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead><tr class="border-b border-slate-100 text-left">
-              <th class="pb-3 font-medium text-slate-500">品牌</th>`;
-    allPlatforms.forEach(p => {
-      html += `<th class="pb-3 font-medium text-slate-500 text-center">${platformLabels[p] || p}</th>`;
-    });
-    html += `<th class="pb-3 font-medium text-slate-500 text-center">合计</th></tr></thead><tbody>`;
-    brands.forEach(brand => {
-      let total = 0;
-      html += `<tr class="border-b border-slate-50"><td class="py-3 font-medium text-slate-800">${escHtml(brand)}</td>`;
-      allPlatforms.forEach(p => {
-        const n = brandPlatform[brand][p] || 0;
-        total += n;
-        html += `<td class="py-3 text-center">${n > 0 ? `<span class="inline-flex items-center justify-center w-8 h-8 rounded-lg ${n >= 10 ? 'bg-indigo-100 text-indigo-700 font-bold' : n >= 3 ? 'bg-slate-100 text-slate-600' : 'bg-slate-50 text-slate-400'} text-sm">${n}</span>` : '<span class="text-slate-300">—</span>'}</td>`;
+
+    if (socialSortBy === 'value') {
+      items.sort((a, b) => ((b.engagement_metrics || {}).value_score || 0) - ((a.engagement_metrics || {}).value_score || 0));
+    } else if (socialSortBy === 'time') {
+      items.sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0));
+    } else {
+      items.sort((a, b) => {
+        const ba = (b.engagement_metrics || {}), aa = (a.engagement_metrics || {});
+        return ((ba.liked_count||0)+(ba.comment_count||0)*3+(ba.collected_count||0)*2) - ((aa.liked_count||0)+(aa.comment_count||0)*3+(aa.collected_count||0)*2);
       });
-      html += `<td class="py-3 text-center font-semibold text-slate-700">${total}</td></tr>`;
+    }
+
+    const all = getSocialItems();
+    const tierCounts = {S: 0, A: 0, B: 0, C: 0};
+    all.forEach(e => { const t = (e.engagement_metrics || {}).value_tier || 'C'; tierCounts[t] = (tierCounts[t]||0)+1; });
+    const total = all.length;
+
+    const tagStats = {};
+    all.forEach(e => {
+      const em = e.engagement_metrics || {};
+      const eng = (em.liked_count||0)+(em.comment_count||0)*3+(em.collected_count||0)*2+(em.share_count||0)*2;
+      (em.ai_tags||[]).forEach(t => {
+        if (t === '品牌联动') return;
+        if (!tagStats[t]) tagStats[t] = {count:0, total:0};
+        tagStats[t].count++;
+        tagStats[t].total += eng;
+      });
     });
-    html += '</tbody></table></div></div>';
+    const topTags = Object.entries(tagStats).map(([tag,d]) => ({tag, count:d.count, avg:Math.round(d.total/d.count)})).sort((a,b) => b.avg-a.avg).slice(0,8);
+    const maxTagAvg = topTags.length > 0 ? topTags[0].avg : 1;
+
+    let html = '';
+
+    if (socialSearching) {
+      html += `<div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:12px;">
+        <div style="width:20px;height:20px;border:3px solid #c7d2fe;border-top-color:#6366f1;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+        <span style="font-size:14px;color:#4f46e5;font-weight:500;">正在搜索小红书关键词（${SOCIAL_KEYWORDS.join('、')}），请稍候...</span>
+      </div>`;
+    } else if (socialSearchError) {
+      html += `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px 20px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:16px;">⚠️</span>
+          <span style="font-size:14px;color:#dc2626;font-weight:600;">搜索失败</span>
+        </div>
+        <p style="font-size:13px;color:#991b1b;">${escHtml(socialSearchError)}</p>
+        <button onclick="startSocialSearch()" style="margin-top:8px;padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">重试搜索</button>
+      </div>`;
+    } else if (!socialSearched && total === 0) {
+      html += `<div style="text-align:center;padding:60px 0;">
+        <div style="font-size:48px;margin-bottom:16px;"> </div>
+        <p style="font-size:15px;color:#94a3b8;margin-bottom:16px;">暂无关键词搜索数据</p>
+        <button onclick="startSocialSearch()" style="padding:10px 24px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">开始搜索</button>
+        <p style="font-size:12px;color:#cbd5e1;margin-top:12px;">搜索结果会持久保存，不会每次重新搜索</p>
+      </div>`;
+    } else if (socialSearched && total === 0) {
+      html += `<div style="text-align:center;padding:60px 0;">
+        <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+        <p style="font-size:15px;color:#f59e0b;margin-bottom:8px;font-weight:600;">搜索完成但未获取到结果</p>
+        <p style="font-size:13px;color:#94a3b8;margin-bottom:16px;">可能是小红书 Cookie 已过期，请从浏览器 DevTools 更新 Cookie</p>
+        <button onclick="startSocialSearch()" style="padding:10px 24px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">重新搜索</button>
+      </div>`;
+    }
+
+    if (total > 0) {
+      html += `<div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
+        <div onclick="setSocialTierFilter('')" style="flex:1;min-width:100px;background:${!socialTierFilter?'#6366f1':'#fff'};color:${!socialTierFilter?'#fff':'#1e293b'};border:1px solid ${!socialTierFilter?'#6366f1':'#e2e8f0'};border-radius:12px;padding:16px;text-align:center;cursor:pointer;">
+          <div style="font-size:24px;font-weight:700;">${total}</div>
+          <div style="font-size:12px;${!socialTierFilter?'color:#c7d2fe':'color:#64748b'};">全部</div>
+        </div>
+        <div onclick="setSocialTierFilter('S')" style="flex:1;min-width:100px;background:${socialTierFilter==='S'?'#dc2626':'#fff'};color:${socialTierFilter==='S'?'#fff':'#1e293b'};border:1px solid ${socialTierFilter==='S'?'#dc2626':'#e2e8f0'};border-radius:12px;padding:16px;text-align:center;cursor:pointer;">
+          <div style="font-size:24px;font-weight:700;">${tierCounts.S}</div>
+          <div style="font-size:12px;${socialTierFilter==='S'?'color:#fecaca':'color:#64748b'};">S级 极高价值</div>
+        </div>
+        <div onclick="setSocialTierFilter('A')" style="flex:1;min-width:100px;background:${socialTierFilter==='A'?'#f59e0b':'#fff'};color:${socialTierFilter==='A'?'#fff':'#1e293b'};border:1px solid ${socialTierFilter==='A'?'#f59e0b':'#e2e8f0'};border-radius:12px;padding:16px;text-align:center;cursor:pointer;">
+          <div style="font-size:24px;font-weight:700;">${tierCounts.A}</div>
+          <div style="font-size:12px;${socialTierFilter==='A'?'color:#fef3c7':'color:#64748b'};">A级 高价值</div>
+        </div>
+        <div onclick="setSocialTierFilter('B')" style="flex:1;min-width:100px;background:${socialTierFilter==='B'?'#3b82f6':'#fff'};color:${socialTierFilter==='B'?'#fff':'#1e293b'};border:1px solid ${socialTierFilter==='B'?'#3b82f6':'#e2e8f0'};border-radius:12px;padding:16px;text-align:center;cursor:pointer;">
+          <div style="font-size:24px;font-weight:700;">${tierCounts.B}</div>
+          <div style="font-size:12px;${socialTierFilter==='B'?'color:#bfdbfe':'color:#64748b'};">B级 中等</div>
+        </div>
+        <div onclick="setSocialTierFilter('C')" style="flex:1;min-width:100px;background:${socialTierFilter==='C'?'#64748b':'#fff'};color:${socialTierFilter==='C'?'#fff':'#1e293b'};border:1px solid ${socialTierFilter==='C'?'#64748b':'#e2e8f0'};border-radius:12px;padding:16px;text-align:center;cursor:pointer;">
+          <div style="font-size:24px;font-weight:700;">${tierCounts.C}</div>
+          <div style="font-size:12px;${socialTierFilter==='C'?'color:#cbd5e1':'color:#64748b'};">C级 低价值</div>
+        </div>
+      </div>`;
+
+      if (topTags.length > 0) {
+        html += `<div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:24px;margin-bottom:24px;">
+          <h3 style="font-size:16px;font-weight:600;color:#1e293b;margin-bottom:16px;">宣发效果分析</h3>
+          <p style="font-size:12px;color:#94a3b8;margin-bottom:16px;">按宣发手法标签分组，柱长代表平均互动值（点赞×1 + 评论×3 + 收藏×2 + 分享×2）</p>
+          ${topTags.map(t => {
+            const pct = Math.max(5, Math.round(t.avg / maxTagAvg * 100));
+            return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+              <span style="width:80px;font-size:13px;color:#475569;text-align:right;flex-shrink:0;">${escHtml(t.tag)}</span>
+              <div style="flex:1;background:#f1f5f9;border-radius:4px;height:24px;overflow:hidden;">
+                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#6366f1,#818cf8);border-radius:4px;"></div>
+              </div>
+              <span style="font-size:12px;color:#64748b;width:100px;flex-shrink:0;">${t.avg} avg (${t.count}条)</span>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }
+
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h3 style="font-size:16px;font-weight:600;color:#1e293b;">帖子列表 (${items.length}条)</h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="font-size:13px;color:#64748b;">排序:</span>
+          <select onchange="socialSortBy=this.value;renderSocialTab();" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;background:#f8fafc;">
+            <option value="value" ${socialSortBy==='value'?'selected':''}>按价值</option>
+            <option value="time" ${socialSortBy==='time'?'selected':''}>按时间</option>
+            <option value="engagement" ${socialSortBy==='engagement'?'selected':''}>按互动</option>
+          </select>
+          <button onclick="startSocialSearch()" style="padding:6px 14px;background:#6366f1;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;${socialSearching?'opacity:0.5;cursor:not-allowed;':''}">刷新搜索</button>
+        </div>
+      </div>`;
+
+      items.forEach(u => {
+        const em = u.engagement_metrics || {};
+        const tier = em.value_tier || 'C';
+        const score = em.value_score || 0;
+        const contentType = em.content_type || 'general';
+        const typeNames = { multi_brand_comparison:'多品牌横评', single_brand_review:'单品牌测评', kol_recommendation:'KOL推荐', tutorial:'教程科普', general_review:'一般测评', user_share:'用户分享', general:'一般讨论' };
+        const tc = {S:{bg:'#fef2f2',color:'#dc2626',border:'#fca5a5'}, A:{bg:'#fffbeb',color:'#d97706',border:'#fcd34d'}, B:{bg:'#eff6ff',color:'#2563eb',border:'#93c5fd'}, C:{bg:'#f8fafc',color:'#64748b',border:'#cbd5e1'}}[tier] || {bg:'#f8fafc',color:'#64748b',border:'#cbd5e1'};
+
+        html += `<div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:20px;margin-bottom:12px;">
+          <div style="display:flex;gap:16px;">
+            ${u.thumbnail_url ? `<div style="flex-shrink:0;width:96px;height:96px;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;"><img src="${escHtml(u.thumbnail_url)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.outerHTML='<div style=\\'flex-shrink:0;width:96px;height:96px;border-radius:8px;background:#fef2f2;display:flex;align-items:center;justify-content:center;\\'> <span style=\\'font-size:32px;\\'> </span></div>'" /></div>` : `<div style="flex-shrink:0;width:96px;height:96px;border-radius:8px;background:#fef2f2;display:flex;align-items:center;justify-content:center;"><span style="font-size:32px;"> </span></div>`}
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                <div style="flex:1;min-width:0;">
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+                    <span style="padding:2px 8px;background:${tc.bg};color:${tc.color};border:1px solid ${tc.border};font-size:11px;font-weight:700;border-radius:4px;">${tier}级 ${score}分</span>
+                    <span style="padding:2px 8px;background:#f0fdf4;color:#16a34a;font-size:11px;font-weight:600;border-radius:4px;border:1px solid #bbf7d0;">${typeNames[contentType]||contentType}</span>
+                    ${em.nickname?`<span style="padding:2px 8px;background:#f1f5f9;color:#475569;font-size:11px;border-radius:4px;">${escHtml(em.nickname)}</span>`:''}
+                    <span style="padding:2px 8px;background:#fef2f2;color:#ef4444;font-size:11px;font-weight:600;border-radius:4px;">小红书</span>
+                  </div>
+                  <h4 style="font-size:15px;font-weight:600;color:#1e293b;margin:0;">${escHtml(u.title||(u.content||'').replace(/<[^>]+>/g,'').slice(0,60)||'(无标题)')}</h4>
+                  ${(em.ai_tags||[]).length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${(em.ai_tags).slice(0,5).map(t=>`<span style="padding:2px 8px;background:#f5f3ff;color:#7c3aed;font-size:10px;font-weight:600;border-radius:12px;border:1px solid #e9e5ff;">#${escHtml(t)}</span>`).join('')}</div>`:''}
+                  ${((em.extracted_info?.brands||[]).length||(em.extracted_info?.products||[]).length||(em.extracted_info?.ingredients||[]).length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${(em.extracted_info.brands||[]).map(b=>`<span style="padding:2px 8px;background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:600;border-radius:12px;border:1px solid #bfdbfe;">${escHtml(b)}</span>`).join('')}${(em.extracted_info.products||[]).map(p=>`<span style="padding:2px 8px;background:#f0fdf4;color:#15803d;font-size:10px;font-weight:600;border-radius:12px;border:1px solid #bbf7d0;">${escHtml(p)}</span>`).join('')}${(em.extracted_info.ingredients||[]).map(ig=>`<span style="padding:2px 8px;background:#fff7ed;color:#c2410c;font-size:10px;font-weight:600;border-radius:12px;border:1px solid #fed7aa;">${escHtml(ig)}</span>`).join('')}</div>`:''}
+                </div>
+                <span style="font-size:12px;color:#94a3b8;white-space:nowrap;margin-left:12px;">${u.published_at?new Date(u.published_at).toLocaleString('zh-CN'):''}</span>
+              </div>
+              <p style="font-size:13px;color:#64748b;margin:8px 0;line-height:1.5;">${escHtml((u.content||'').replace(/<[^>]+>/g,'').slice(0,150))}</p>
+              <div style="display:flex;align-items:center;gap:16px;font-size:12px;color:#94a3b8;">
+                <span> </span> ${(em.liked_count||0)} <span style="margin-left:4px;"> </span> ${(em.comment_count||0)} <span style="margin-left:4px;">⭐</span> ${(em.collected_count||0)}
+                <span style="margin-left:auto;">
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <div style="display:flex;gap:4px;font-size:11px;color:#94a3b8;">
+                      <span>内容${(em.scoring_breakdown||{}).content_score||0}</span>
+                      <span>互动${(em.scoring_breakdown||{}).engagement_score||0}</span>
+                      <span>相关${(em.scoring_breakdown||{}).relevance_score||0}</span>
+                    </div>
+                    ${u.url?`<a href="${escHtml(u.url)}" target="_blank" rel="noopener" style="padding:4px 12px;border:1px solid #e2e8f0;color:#475569;font-size:12px;font-weight:600;border-radius:6px;text-decoration:none;">查看原文</a>`:''}
+                  </div>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      });
+    }
+
     el.innerHTML = html;
   }
 
-  // ── Social tab: 社媒热榜 ──
-  function renderSocialTab() {
-    const el = document.getElementById('socialContent');
-    if (allEntries.length === 0) {
-      el.innerHTML = '<div class="py-20 text-center"><p class="text-slate-400">暂无数据</p></div>';
-      return;
+  function setSocialTierFilter(tier) {
+    socialTierFilter = socialTierFilter === tier ? '' : tier;
+    renderSocialTab();
+  }
+
+  async function startSocialSearch() {
+    if (socialSearching) return;
+    socialSearching = true;
+    socialSearchError = '';
+    renderSocialTab();
+
+    try {
+      const resp = await fetch('/api/xhs/search', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({keywords: SOCIAL_KEYWORDS, num: 30}),
+      });
+      if (!resp.ok) {
+        const errText = await resp.text();
+        socialSearchError = `HTTP ${resp.status}: ${errText}`;
+      } else {
+        const data = await resp.json();
+        if (data.success) {
+          socialLastSearchTime = new Date();
+          const latest = await fetch('/api/data/latest');
+          const latestData = await latest.json();
+          if (latestData.has_data) {
+            allEntries = latestData.data?.OfficialUpdates?.updates || [];
+          }
+        } else {
+          socialSearchError = data.detail || '搜索失败，未知原因';
+        }
+      }
+    } catch (err) {
+      socialSearchError = '请求异常: ' + err.message;
     }
-    // 按含图/视频优先排序（有 media 的更可能有互动）
-    const sorted = [...allEntries].sort((a, b) => {
-      const aHasMedia = (a.media_urls && a.media_urls.length > 0) || a.thumbnail_url ? 1 : 0;
-      const bHasMedia = (b.media_urls && b.media_urls.length > 0) || b.thumbnail_url ? 1 : 0;
-      if (bHasMedia !== aHasMedia) return bHasMedia - aHasMedia;
-      const ta = new Date(a.published_at || 0).getTime();
-      const tb = new Date(b.published_at || 0).getTime();
-      return tb - ta;
-    });
-    const platformLabels = { weibo: '微博', xiaohongshu: '小红书', bilibili: 'bilibili' };
-    let html = `
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold text-slate-900">社媒热榜 <span class="text-sm font-normal text-slate-400">(${sorted.length} 条)</span></h3>
-        </div>
-        <div class="space-y-4">`;
-    sorted.slice(0, 30).forEach((u, i) => {
-      const title = escHtml(u.title || (u.content || '').replace(/<[^>]+>/g, '').slice(0, 50));
-      const desc = escHtml((u.content || '').replace(/<[^>]+>/g, '').slice(0, 80));
-      const time = u.published_at ? new Date(u.published_at).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-      const raw = u.engagement_metrics?.feed_title || u.engagement_metrics?.nickname || u.engagement_metrics?.author || '';
-      const brand = escHtml(extractBrandName(raw));
-      const plat = platformLabels[u.platform] || u.platform;
-      const platColor = u.platform === 'xiaohongshu' ? 'bg-red-50 text-red-500' : u.platform === 'bilibili' ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-500';
-      const thumb = u.thumbnail_url || (u.media_urls && u.media_urls[0]) || '';
-      const imgHtml = thumb ? `<img src="${escHtml(thumb)}" class="w-10 h-10 rounded-lg object-cover flex-shrink-0" onerror="this.outerHTML='<div class=\\'w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0\\'>${i + 1}</div>'" />` : `<div class="w-10 h-10 rounded-lg ${i < 3 ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'} flex items-center justify-center text-sm font-bold flex-shrink-0">${i + 1}</div>`;
-      html += `
-        <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-          ${imgHtml}
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-1">
-              ${brand ? `<span class="text-xs text-slate-500 font-medium">${brand}</span>` : ''}
-              <span class="px-1.5 py-0.5 ${platColor} text-[10px] font-bold rounded">${plat}</span>
-            </div>
-            <p class="text-sm font-medium text-slate-800 truncate">${title || desc}</p>
-          </div>
-          <span class="text-xs text-slate-400 whitespace-nowrap flex-shrink-0">${time}</span>
-          ${u.url ? `<a href="${escHtml(u.url)}" target="_blank" rel="noopener" class="text-indigo-500 hover:text-indigo-700 text-xs flex-shrink-0">查看</a>` : ''}
-        </div>`;
-    });
-    html += '</div></div>';
-    el.innerHTML = html;
+    socialSearching = false;
+    socialSearched = true;
+    renderSocialTab();
   }
 
   // ── Price tab: 品牌发布节奏时间线 ──
@@ -540,7 +676,7 @@
     }
     // 按品牌分组，每个品牌显示发布时间线
     const brands = {};
-    allEntries.forEach(e => {
+    allEntries.filter(e => !(e.source_url || '').includes('xhs:keyword:')).forEach(e => {
       const raw = e.engagement_metrics?.feed_title || e.engagement_metrics?.nickname || e.engagement_metrics?.author || '';
       const name = extractBrandName(raw) || '(未知)';
       if (!brands[name]) brands[name] = [];
@@ -612,7 +748,7 @@
     const collabType = document.getElementById('typeSelect').value;
     const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
 
-    let collabEntries = allEntries.filter(e => (e.engagement_metrics?.collab_partners || []).length > 0);
+    let collabEntries = allEntries.filter(e => !(e.source_url || '').includes('xhs:keyword:')).filter(e => (e.engagement_metrics?.collab_partners || []).length > 0);
     collabEntries = collabEntries.filter(e => {
       if (!matchPlatform(e.platform, platform)) return false;
       if (brand) {
@@ -789,7 +925,7 @@
 
         // 动态填充品牌下拉框（按统一品牌名合并）
         const brandSet = new Set();
-        updates.forEach(u => {
+        updates.filter(u => !(u.source_url || '').includes('xhs:keyword:')).forEach(u => {
           const raw = u.engagement_metrics?.feed_title || u.engagement_metrics?.nickname || u.engagement_metrics?.author || '';
           const name = extractBrandName(raw);
           if (name) brandSet.add(name);
@@ -805,7 +941,7 @@
 
         // 动态填充类型下拉框（只显示数据中实际出现的类型）
         const typeSet = new Set();
-        updates.forEach(u => typeSet.add(u.update_type || 'brand_content'));
+        updates.filter(u => !(u.source_url || '').includes('xhs:keyword:')).forEach(u => typeSet.add(u.update_type || 'brand_content'));
         const typeSelect = document.getElementById('typeSelect');
         typeSelect.innerHTML = '<option value="">全部类型</option>';
         Object.entries(TYPE_LABELS).forEach(([key, label]) => {

@@ -14,6 +14,7 @@ from langgraph.graph import StateGraph, END
 from src.agents.searcher.official_updates_agent import create_official_updates_agent
 from src.agents.searcher.content_classification_agent import create_content_classification_agent
 from src.agents.searcher.content_tagging_agent import create_content_tagging_agent
+from src.agents.searcher.ocr_agent import create_ocr_agent
 from src.agents.searcher.brand_culture_agent import create_brand_culture_agent
 from src.agents.searcher.social_media_feedback_agent import create_social_media_feedback_agent
 from src.agents.searcher.shopping_platform_feedback_agent import create_shopping_platform_feedback_agent
@@ -30,6 +31,7 @@ from src.utils.config import (
     get_template_driven_report_agent_config,
     get_task_dispatcher_agent_config,
     get_xhs_agent_config,
+    get_ocr_agent_config,
 )
 
 
@@ -92,6 +94,7 @@ def create_full_workflow(use_mock: bool = True) -> StateGraph:
     official_updates_node = create_official_updates_agent(ofu_config)
     content_classification_node = create_content_classification_agent({})
     content_tagging_node = create_content_tagging_agent({})
+    ocr_node = create_ocr_agent(get_ocr_agent_config())
     brand_culture_node = create_brand_culture_agent(bcl_config)
     social_feedback_node = create_social_media_feedback_agent(smf_config)
     shopping_feedback_node = create_shopping_platform_feedback_agent(spf_config)
@@ -107,6 +110,7 @@ def create_full_workflow(use_mock: bool = True) -> StateGraph:
     workflow.add_node("official_updates_agent", official_updates_node)
     workflow.add_node("content_classification_agent", content_classification_node)
     workflow.add_node("content_tagging_agent", content_tagging_node)
+    workflow.add_node("ocr_agent", ocr_node)
     workflow.add_node("brand_culture_agent", brand_culture_node)
     workflow.add_node("social_media_feedback_agent", social_feedback_node)
     workflow.add_node("shopping_platform_feedback_agent", shopping_feedback_node)
@@ -121,7 +125,8 @@ def create_full_workflow(use_mock: bool = True) -> StateGraph:
     # ── Searcher group edges (sequential) ──
     workflow.add_edge("official_updates_agent", "content_classification_agent")
     workflow.add_edge("content_classification_agent", "content_tagging_agent")
-    workflow.add_edge("content_tagging_agent", "brand_culture_agent")
+    workflow.add_edge("content_tagging_agent", "ocr_agent")
+    workflow.add_edge("ocr_agent", "brand_culture_agent")
     workflow.add_edge("brand_culture_agent", "social_media_feedback_agent")
     workflow.add_edge("social_media_feedback_agent", "shopping_platform_feedback_agent")
 

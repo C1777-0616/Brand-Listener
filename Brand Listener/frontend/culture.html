@@ -26,10 +26,10 @@
   <!-- Main -->
   <div class="ml-64 p-8">
     <div class="flex items-center justify-between mb-6">
-      <div><h1 class="text-2xl font-bold text-slate-900">品牌文化监听</h1><p class="text-sm text-slate-500 mt-1">追踪品牌文化动态与舆论趋势</p></div>
-      <div class="flex bg-slate-100 rounded-lg p-0.5 text-sm">
-        <span class="px-4 py-1.5 bg-white rounded-md shadow-sm font-medium text-indigo-600 cursor-pointer">周态视图</span>
-        <span class="px-4 py-1.5 text-slate-500 cursor-pointer">月度汇总</span>
+      <div><h1 class="text-2xl font-bold text-slate-900">品牌文化监听</h1><p class="text-sm text-slate-500 mt-1">基于内容标签的品牌文化维度分析</p></div>
+      <div class="flex bg-slate-100 rounded-lg p-0.5 text-sm" id="periodToggle">
+        <span class="days-toggle px-4 py-1.5 bg-white rounded-md shadow-sm font-medium text-indigo-600 cursor-pointer" data-days="7">周态视图</span>
+        <span class="days-toggle px-4 py-1.5 text-slate-500 cursor-pointer" data-days="30">月度汇总</span>
       </div>
     </div>
 
@@ -38,10 +38,10 @@
       <div class="xl:col-span-1 bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col items-center">
         <p class="text-sm text-slate-400 mb-2">文化健康度</p>
         <div class="relative w-32 h-32">
-          <svg class="w-32 h-32 -rotate-90" viewBox="0 0 128 128"><circle cx="64" cy="64" r="58" fill="none" stroke="#e2e8f0" stroke-width="8"/><circle id="healthArc" cx="64" cy="64" r="58" fill="none" stroke="#4f46e5" stroke-width="8" stroke-dasharray="364.24" stroke-dashoffset="100" class="transition-all duration-1000"/></svg>
+          <svg class="w-32 h-32 -rotate-90" viewBox="0 0 128 128"><circle cx="64" cy="64" r="58" fill="none" stroke="#e2e8f0" stroke-width="8"/><circle id="healthArc" cx="64" cy=64 r="58" fill="none" stroke="#4f46e5" stroke-width="8" stroke-dasharray="364.24" stroke-dashoffset="364.24" class="transition-all duration-1000"/></svg>
           <div class="absolute inset-0 flex items-center justify-center"><span id="healthScore" class="text-3xl font-bold text-slate-900">—</span></div>
         </div>
-        <p id="healthTrend" class="text-xs text-green-600 mt-2">+0% MoM</p>
+        <p id="healthTrend" class="text-xs text-slate-400 mt-2">基于内容标签分析</p>
       </div>
       <div class="xl:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
         <h3 class="font-semibold text-slate-900 mb-4">文化维度明细</h3>
@@ -54,17 +54,17 @@
       <!-- Left column -->
       <div class="space-y-6">
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <h3 class="font-semibold text-slate-900 mb-3">创始人动态</h3>
-          <div id="founderSection" class="text-sm text-slate-400">暂无数据</div>
+          <h3 class="font-semibold text-slate-900 mb-3">品牌近期动态</h3>
+          <div id="founderSection" class="text-sm text-slate-400">加载中...</div>
         </div>
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <h3 class="font-semibold text-slate-900 mb-3">文化影响力榜单</h3>
-          <div id="influenceList" class="text-sm text-slate-400">暂无数据</div>
+          <h3 class="font-semibold text-slate-900 mb-3">高标签密度内容</h3>
+          <div id="influenceList" class="text-sm text-slate-400">加载中...</div>
         </div>
       </div>
       <!-- Right column -->
       <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <h3 class="font-semibold text-slate-900 mb-4">文化动态时间线</h3>
+        <h3 class="font-semibold text-slate-900 mb-4">内容动态时间线</h3>
         <div id="timelineList" class="text-sm text-slate-400">加载中...</div>
       </div>
     </div>
@@ -72,56 +72,118 @@
 
   <script src="/static/api.js"></script>
   <script>
-    async function render() {
-      const data = await fetchPipelineData();
-      const bce = data.BrandCultureEvents || {};
-      const events = bce.events || [];
-      const keywords = bce.top_keywords || [];
-      const dist = bce.sentiment_distribution || {};
+    let currentDays = 7;
+    // Tag-to-dimension mapping
+    const DIM_TAGS = {
+      '团队凝聚力': ['品牌故事', '品牌调性', '线下活动', '线下见面', '互动话题'],
+      '创新活力': ['新品发布', '产品发布', '独家专利', '产品玩梗', '内容共创'],
+      '社会责任感': ['品牌故事', '公益合作', '育儿亲子', '教程科普'],
+      '价值观认同': ['品牌调性', '品牌资讯', '网感互动', '粉丝运营'],
+    };
 
-      // Health score
-      const pos = dist.positive || 0;
-      const total = (pos + (dist.neutral || 0) + (dist.negative || 0)) || 1;
-      const score = Math.round((pos / total) * 100);
-      document.getElementById("healthScore").textContent = score || "—";
-      const arc = document.getElementById("healthArc");
-      const circumference = 364.24;
-      const offset = circumference - (circumference * (score / 100));
-      arc.setAttribute("stroke-dashoffset", offset);
-
-      // Dimensions
-      document.getElementById("dimensionBars").innerHTML = [
-        { label: "团队凝聚力", pct: Math.min(100, score + 10), color: "bg-indigo-600" },
-        { label: "创新活力", pct: Math.min(100, score - 5), color: "bg-blue-500" },
-        { label: "社会责任感", pct: Math.min(100, score + 2), color: "bg-teal-500" },
-        { label: "价值观认同", pct: Math.min(100, score - 3), color: "bg-rose-500" },
-      ].map(d => `<div><div class="flex justify-between text-sm mb-1"><span>${d.label}</span><span class="text-slate-500">${d.pct}/100</span></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 rounded-full ${d.color} transition-all duration-700" style="width:${d.pct}%"></div></div></div>`).join("");
-
-      // Founder
-      document.getElementById("founderSection").innerHTML = keywords.length ? `
-        <div class="bg-slate-50 rounded-xl p-4 mb-3"><p class="text-sm text-slate-700 italic">"品牌文化建设是长期工程"</p><p class="text-xs text-slate-400 mt-2">—— 创始人 · 近期内部讲话</p></div>
-        <div class="flex flex-wrap gap-1.5">${keywords.map(k => `<span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">${k}</span>`).join("")}</div>
-      ` : '暂无数据';
-
-      // Influence
-      document.getElementById("influenceList").innerHTML = events.slice(0, 3).map((e, i) => `
-        <div class="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0">
-          <span class="text-lg font-bold text-slate-200 w-6">#${i+1}</span>
-          <div class="flex-1"><div class="text-sm font-medium text-slate-900">${escapeHtml(e.content?.substring(0, 20) || '事件')}</div><div class="text-xs text-slate-400">热度 ${e.engagement_count || 0}</div></div>
-        </div>
-      `).join("");
-
-      // Timeline
-      document.getElementById("timelineList").innerHTML = events.length ? events.map(e => `
-        <div class="relative pl-6 pb-5 border-l-2 border-indigo-200 last:border-transparent">
-          <div class="absolute -left-2 top-0 w-4 h-4 rounded-full bg-indigo-600 border-2 border-white"></div>
-          <div class="text-xs text-slate-400">${formatTime(e.timestamp)}</div>
-          <div class="text-sm font-medium text-slate-900 mt-0.5">${escapeHtml(e.content?.substring(0, 40) || '')}</div>
-          <div class="flex gap-1 mt-1"><span class="text-xs bg-slate-100 px-2 py-0.5 rounded">${e.platform || ''}</span><span class="text-xs bg-slate-100 px-2 py-0.5 rounded">${e.category || ''}</span></div>
-        </div>
-      `).join("") : '<div class="text-sm text-slate-400 text-center py-4">暂无文化动态</div>';
+    async function loadCulture(days) {
+      currentDays = days;
+      try {
+        const [stats, feed] = await Promise.all([
+          fetchEntryStats(days),
+          fetchEntryFeed(1, 20, { days }),
+        ]);
+        renderHealthScore(stats);
+        renderDimensions(stats);
+        renderFounder(stats);
+        renderInfluence(feed);
+        renderTimeline(feed);
+      } catch (e) { console.error('Culture load error:', e); }
     }
-    document.addEventListener("DOMContentLoaded", render);
+
+    function renderHealthScore(stats) {
+      const tags = stats.top_tags || [];
+      const positiveTags = ['品牌故事', '新品发布', '品牌调性', '产品种草', '品牌联动', '独家专利', '限量限定'];
+      const posCount = tags.filter(t => positiveTags.includes(t.tag)).reduce((s, t) => s + t.count, 0);
+      const total = stats.total_entries || 1;
+      const score = Math.min(95, Math.round((posCount / total) * 100 + 30));
+      document.getElementById('healthScore').textContent = score;
+      const arc = document.getElementById('healthArc');
+      const circumference = 364.24;
+      arc.setAttribute('stroke-dashoffset', circumference - (circumference * (score / 100)));
+    }
+
+    function renderDimensions(stats) {
+      const tagMap = {};
+      (stats.top_tags || []).forEach(t => { tagMap[t.tag] = t.count; });
+      const total = stats.total_entries || 1;
+      const dimensions = Object.entries(DIM_TAGS).map(([label, relatedTags]) => {
+        const count = relatedTags.reduce((s, t) => s + (tagMap[t] || 0), 0);
+        const pct = Math.min(95, Math.round((count / total) * 100 + 15));
+        const colors = { '团队凝聚力': 'bg-indigo-600', '创新活力': 'bg-blue-500', '社会责任感': 'bg-teal-500', '价值观认同': 'bg-rose-500' };
+        return { label, pct, color: colors[label] || 'bg-slate-400', count };
+      });
+      document.getElementById('dimensionBars').innerHTML = dimensions.map(d =>
+        `<div><div class="flex justify-between text-sm mb-1"><span>${d.label}</span><span class="text-slate-500">${d.pct}/100（${d.count} 条相关）</span></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 rounded-full ${d.color} transition-all duration-700" style="width:${d.pct}%"></div></div></div>`
+      ).join('');
+    }
+
+    function renderFounder(stats) {
+      const recent = (stats.entries_per_day || []).slice(-7);
+      const totalWeek = recent.reduce((s, d) => s + d.count, 0);
+      const topTag = (stats.top_tags || [])[0];
+      document.getElementById('founderSection').innerHTML = `
+        <div class="bg-slate-50 rounded-xl p-4 mb-3">
+          <p class="text-sm text-slate-700">近 ${currentDays} 天共发布 <strong>${stats.total_entries}</strong> 条内容</p>
+          <p class="text-xs text-slate-400 mt-1">覆盖 ${Object.keys(stats.by_platform || {}).length} 个平台，${(stats.top_brands || []).length} 个品牌</p>
+        </div>
+        ${topTag ? `<div class="text-sm"><span class="text-slate-500">最热标签：</span><span class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full text-xs font-medium">${escapeHtml(topTag.tag)}</span> <span class="text-slate-400">(${topTag.count}次)</span></div>` : ''}
+        <div class="mt-3 flex flex-wrap gap-1.5">${(stats.top_tags || []).slice(0, 8).map(t => `<span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">${escapeHtml(t.tag)}</span>`).join('')}</div>
+      `;
+    }
+
+    function renderInfluence(feed) {
+      const entries = (feed.entries || []).slice(0, 5);
+      if (!entries.length) { document.getElementById('influenceList').innerHTML = '<div class="text-sm text-slate-400">暂无数据</div>'; return; }
+      // Sort by tag count desc
+      entries.sort((a, b) => ((b.engagement_metrics?.ai_tags || []).length) - ((a.engagement_metrics?.ai_tags || []).length));
+      document.getElementById('influenceList').innerHTML = entries.map((e, i) => {
+        const tagCount = (e.engagement_metrics?.ai_tags || []).length;
+        return `<div class="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0">
+          <span class="text-lg font-bold text-slate-200 w-6">#${i+1}</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-slate-900 truncate">${escapeHtml(e.title || '(无标题)')}</div>
+            <div class="text-xs text-slate-400">${tagCount} 个标签 · ${e.platform || ''}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderTimeline(feed) {
+      const entries = feed.entries || [];
+      if (!entries.length) { document.getElementById('timelineList').innerHTML = '<div class="text-sm text-slate-400 text-center py-4">暂无文化动态</div>'; return; }
+      const PLATFORM_COLORS = { weibo: '#E6162D', xiaohongshu: '#FF2442', bilibili: '#00A1D6' };
+      document.getElementById('timelineList').innerHTML = entries.map(e => {
+        const tags = (e.engagement_metrics?.ai_tags || []).slice(0, 3);
+        const platColor = PLATFORM_COLORS[e.platform] || '#94A3B8';
+        return `<div class="relative pl-6 pb-5 border-l-2 border-indigo-200 last:border-transparent">
+          <div class="absolute -left-2 top-0 w-4 h-4 rounded-full border-2 border-white" style="background:${platColor}"></div>
+          <div class="text-xs text-slate-400">${formatTime(e.published_at)}</div>
+          <div class="text-sm font-medium text-slate-900 mt-0.5">${escapeHtml(e.title || '(无标题)')}</div>
+          <div class="flex gap-1 mt-1">
+            <span class="text-xs bg-slate-100 px-2 py-0.5 rounded">${e.platform || ''}</span>
+            ${tags.map(t => `<span class="text-xs bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">${escapeHtml(t)}</span>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.days-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.days-toggle').forEach(b => { b.classList.remove('bg-white', 'shadow-sm', 'font-medium', 'text-indigo-600'); b.classList.add('text-slate-500'); });
+          btn.classList.add('bg-white', 'shadow-sm', 'font-medium', 'text-indigo-600');
+          btn.classList.remove('text-slate-500');
+          loadCulture(parseInt(btn.dataset.days));
+        });
+      });
+      loadCulture(currentDays);
+    });
   </script>
 </body>
 </html>

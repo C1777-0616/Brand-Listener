@@ -29,46 +29,30 @@
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
       <!-- Left settings nav -->
       <div class="space-y-1">
-        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-50 text-indigo-600 font-medium text-sm text-left transition">监控品牌库</button>
-        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 text-sm text-left transition">数据源与 API</button>
-        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 text-sm text-left transition">成员与权限管理</button>
-        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 text-sm text-left transition">预警推送通知</button>
-        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 text-sm text-left transition">系统操作日志</button>
+        <button class="settings-nav w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-50 text-indigo-600 font-medium text-sm text-left transition" data-section="brands">监控品牌库</button>
+        <button class="settings-nav w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 text-sm text-left transition" data-section="datasource">数据源与 API</button>
+        <button class="settings-nav w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 text-sm text-left transition" data-section="team">成员与权限管理</button>
+        <button class="settings-nav w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 text-sm text-left transition" data-section="alerts">预警推送通知</button>
+        <button class="settings-nav w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 text-sm text-left transition" data-section="logs">系统操作日志</button>
       </div>
       <!-- Right content -->
       <div class="lg:col-span-3 space-y-6">
-        <!-- Brand list -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <div class="flex items-center justify-between mb-4"><h3 class="font-semibold text-slate-900">监控品牌库 <span id="brandCount" class="text-sm font-normal text-slate-400">(0)</span></h3><button id="addBrandBtn" class="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700"><iconify-icon icon="mdi:plus"></iconify-icon>添加品牌</button></div>
-          <table class="w-full text-sm">
-            <thead><tr class="text-left text-slate-400 border-b border-slate-100"><th class="pb-3 font-medium">品牌名称</th><th class="pb-3 font-medium">微博 UID</th><th class="pb-3 font-medium">平台</th><th class="pb-3 font-medium">状态</th><th class="pb-3 font-medium">操作</th></tr></thead>
-            <tbody id="brandTableBody">
-              <tr><td colspan="5" class="py-8 text-center text-sm text-slate-400">加载中...</td></tr>
-            </tbody>
-          </table>
-        </div>
 
-        <!-- Add Brand Modal -->
-        <div id="addBrandModal" class="fixed inset-0 bg-black/40 z-50 hidden flex items-center justify-center">
-          <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
-            <div class="flex items-center justify-between mb-4"><h3 class="font-semibold text-slate-900">添加监控品牌</h3><button id="closeModalBtn" class="text-slate-400 hover:text-slate-600"><iconify-icon icon="mdi:close"></iconify-icon></button></div>
-            <div class="space-y-4">
-              <div><label class="block text-sm font-medium text-slate-700 mb-1">品牌标识 (ID)</label><input id="formId" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="如: our_brand" /></div>
-              <div><label class="block text-sm font-medium text-slate-700 mb-1">品牌名称</label><input id="formName" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="如: 我方品牌 (BrandListen)" /></div>
-              <div><label class="block text-sm font-medium text-slate-700 mb-1">微博 UID/域名</label><input id="formUid" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="如: brandlisten_official" /></div>
-              <div><label class="block text-sm font-medium text-slate-700 mb-1">微博主页 URL</label><input id="formUrl" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="https://weibo.com/brandlisten_official" /></div>
-              <div class="flex items-center gap-2"><input type="checkbox" id="formEnabled" checked class="rounded text-indigo-600" /><label for="formEnabled" class="text-sm text-slate-700">启用监听</label></div>
-            </div>
-            <div class="flex gap-3 mt-6">
-              <button id="cancelModalBtn" class="flex-1 border border-slate-200 text-slate-600 py-2 rounded-lg text-sm hover:bg-slate-50">取消</button>
-              <button id="saveBrandBtn" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700">保存</button>
-            </div>
-            <p id="formError" class="text-sm text-rose-600 mt-2 hidden"></p>
+        <!-- Section: Brands -->
+        <div id="section-brands" class="settings-section">
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <div class="flex items-center justify-between mb-4"><h3 class="font-semibold text-slate-900">监控品牌库 <span id="brandCount" class="text-sm font-normal text-slate-400">(0)</span></h3><button id="addBrandBtn" class="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700"><iconify-icon icon="mdi:plus"></iconify-icon>添加品牌</button></div>
+            <table class="w-full text-sm">
+              <thead><tr class="text-left text-slate-400 border-b border-slate-100"><th class="pb-3 font-medium">品牌名称</th><th class="pb-3 font-medium">微博 UID</th><th class="pb-3 font-medium">平台</th><th class="pb-3 font-medium">状态</th><th class="pb-3 font-medium">操作</th></tr></thead>
+              <tbody id="brandTableBody">
+                <tr><td colspan="5" class="py-8 text-center text-sm text-slate-400">加载中...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
-        <!-- Data sources -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <h3 class="font-semibold text-slate-900 mb-4">数据源与 API 状态</h3>
+
+        <!-- Section: Data Sources -->
+        <div id="section-datasource" class="settings-section hidden">
           <!-- Follow 导入说明 -->
           <div class="mb-5 bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex gap-3">
             <iconify-icon icon="mdi:database-import" class="text-indigo-500 text-xl shrink-0 mt-0.5"></iconify-icon>
@@ -84,28 +68,148 @@
               <p class="text-xs text-indigo-500 mt-2">Follow 中订阅的所有微博账号内容将自动同步到本系统，无需额外配置。</p>
             </div>
           </div>
-          <div class="grid md:grid-cols-3 gap-4">
-            <div class="border border-slate-100 rounded-xl p-4"><div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-500"></span><span class="font-medium text-sm">天猫/淘宝 API</span></div><div class="h-1 rounded-full bg-slate-100 mb-2"><div class="h-1 rounded-full bg-indigo-600" style="width:76%"></div></div><p class="text-xs text-slate-400">剩余配额 2,400 / 10,000</p></div>
-            <div class="border border-slate-100 rounded-xl p-4"><div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-500"></span><span class="font-medium text-sm">小红书 合规爬虫</span></div><div class="h-1 rounded-full bg-slate-100 mb-2"><div class="h-1 rounded-full bg-indigo-600" style="width:100%"></div></div><p class="text-xs text-slate-400">延迟 120ms · 健康</p></div>
-            <div class="border border-rose-100 rounded-xl p-4 bg-rose-50/30"><div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span><span class="font-medium text-sm">抖音 接口异常</span></div><div class="h-1 rounded-full bg-slate-100 mb-2"><div class="h-1 rounded-full bg-rose-500" style="width:0%"></div></div><p class="text-xs text-rose-600">Token 过期，请重新授权</p></div>
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <h3 class="font-semibold text-slate-900 mb-4">数据源状态</h3>
+            <div id="dataSourceStatus" class="grid md:grid-cols-3 gap-4">
+              <div class="text-sm text-slate-400">加载中...</div>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mt-6">
+            <h3 class="font-semibold text-slate-900 mb-4">Pipeline 状态</h3>
+            <div id="pipelineInfo" class="text-sm text-slate-400">加载中...</div>
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mt-6">
+            <h3 class="font-semibold text-slate-900 mb-4">导出文件</h3>
+            <div id="exportsList" class="text-sm text-slate-400">加载中...</div>
           </div>
         </div>
-        <!-- Team -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <h3 class="font-semibold text-slate-900 mb-4">团队成员与权限</h3>
-          <table class="w-full text-sm">
-            <thead><tr class="text-left text-slate-400 border-b border-slate-100"><th class="pb-3 font-medium">成员信息</th><th class="pb-3 font-medium">角色</th><th class="pb-3 font-medium">最后活跃</th><th class="pb-3 font-medium">操作</th></tr></thead>
-            <tbody>
-              <tr class="border-b border-slate-50"><td class="py-3"><div class="flex items-center gap-3"><img src="https://placehold.co/32x32/e2e8f0/94a3b8?text=U" class="w-8 h-8 rounded-full bg-slate-200" /><div><div class="font-medium text-slate-900">张经理</div><div class="text-xs text-slate-400">zhang@brandlisten.com</div></div></div></td><td class="py-3">系统管理员</td><td class="py-3 text-slate-400">刚刚在线</td><td class="py-3"><span class="text-slate-300 cursor-not-allowed text-sm">修改</span></td></tr>
-              <tr><td class="py-3"><div class="flex items-center gap-3"><img src="https://placehold.co/32x32/e2e8f0/94a3b8?text=U" class="w-8 h-8 rounded-full bg-slate-200" /><div><div class="font-medium text-slate-900">李小美</div><div class="text-xs text-slate-400">li@brandlisten.com</div></div></div></td><td class="py-3">品牌分析师</td><td class="py-3 text-slate-400">10小时前</td><td class="py-3"><a href="#" class="text-indigo-600 hover:underline text-sm">修改</a></td></tr>
-            </tbody>
-          </table>
+
+        <!-- Section: Team -->
+        <div id="section-team" class="settings-section hidden">
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <h3 class="font-semibold text-slate-900 mb-4">团队成员与权限</h3>
+            <table class="w-full text-sm">
+              <thead><tr class="text-left text-slate-400 border-b border-slate-100"><th class="pb-3 font-medium">成员信息</th><th class="pb-3 font-medium">角色</th><th class="pb-3 font-medium">最后活跃</th><th class="pb-3 font-medium">操作</th></tr></thead>
+              <tbody>
+                <tr class="border-b border-slate-50"><td class="py-3"><div class="flex items-center gap-3"><img src="https://placehold.co/32x32/e2e8f0/94a3b8?text=U" class="w-8 h-8 rounded-full bg-slate-200" /><div><div class="font-medium text-slate-900">张经理</div><div class="text-xs text-slate-400">zhang@brandlisten.com</div></div></div></td><td class="py-3">系统管理员</td><td class="py-3 text-slate-400">刚刚在线</td><td class="py-3"><span class="text-slate-300 cursor-not-allowed text-sm">修改</span></td></tr>
+                <tr><td class="py-3"><div class="flex items-center gap-3"><img src="https://placehold.co/32x32/e2e8f0/94a3b8?text=U" class="w-8 h-8 rounded-full bg-slate-200" /><div><div class="font-medium text-slate-900">李小美</div><div class="text-xs text-slate-400">li@brandlisten.com</div></div></div></td><td class="py-3">品牌分析师</td><td class="py-3 text-slate-400">10小时前</td><td class="py-3"><a href="#" class="text-indigo-600 hover:underline text-sm">修改</a></td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        <!-- Section: Alerts -->
+        <div id="section-alerts" class="settings-section hidden">
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <h3 class="font-semibold text-slate-900 mb-4">预警推送通知</h3>
+            <div class="text-sm text-slate-400 py-8 text-center">
+              <iconify-icon icon="mdi:bell-outline" class="text-4xl text-slate-200 mb-2 block"></iconify-icon>
+              预警推送功能开发中，敬请期待
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Logs -->
+        <div id="section-logs" class="settings-section hidden">
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <h3 class="font-semibold text-slate-900 mb-4">系统操作日志</h3>
+            <div class="text-sm text-slate-400 py-8 text-center">
+              <iconify-icon icon="mdi:history" class="text-4xl text-slate-200 mb-2 block"></iconify-icon>
+              操作日志功能开发中，敬请期待
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
+
+  <!-- Add Brand Modal -->
+  <div id="addBrandModal" class="fixed inset-0 bg-black/40 z-50 hidden flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+      <div class="flex items-center justify-between mb-4"><h3 class="font-semibold text-slate-900">添加监控品牌</h3><button id="closeModalBtn" class="text-slate-400 hover:text-slate-600"><iconify-icon icon="mdi:close"></iconify-icon></button></div>
+      <div class="space-y-4">
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">品牌标识 (ID)</label><input id="formId" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="如: our_brand" /></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">品牌名称</label><input id="formName" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="如: 我方品牌 (BrandListen)" /></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">微博 UID/域名</label><input id="formUid" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="如: brandlisten_official" /></div>
+        <div><label class="block text-sm font-medium text-slate-700 mb-1">微博主页 URL</label><input id="formUrl" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="https://weibo.com/brandlisten_official" /></div>
+        <div class="flex items-center gap-2"><input type="checkbox" id="formEnabled" checked class="rounded text-indigo-600" /><label for="formEnabled" class="text-sm text-slate-700">启用监听</label></div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button id="cancelModalBtn" class="flex-1 border border-slate-200 text-slate-600 py-2 rounded-lg text-sm hover:bg-slate-50">取消</button>
+        <button id="saveBrandBtn" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700">保存</button>
+      </div>
+      <p id="formError" class="text-sm text-rose-600 mt-2 hidden"></p>
+    </div>
+  </div>
+
   <script src="/static/api.js"></script>
   <script>
+    const PLATFORM_LABELS = { weibo: '微博', xiaohongshu: '小红书', bilibili: 'B站' };
+
+    // Section navigation
+    function switchSection(name) {
+      document.querySelectorAll('.settings-section').forEach(s => s.classList.add('hidden'));
+      const target = document.getElementById('section-' + name);
+      if (target) target.classList.remove('hidden');
+      document.querySelectorAll('.settings-nav').forEach(b => {
+        b.classList.remove('bg-indigo-50', 'text-indigo-600', 'font-medium');
+        b.classList.add('text-slate-600', 'hover:bg-slate-100');
+      });
+      const active = document.querySelector(`.settings-nav[data-section="${name}"]`);
+      if (active) {
+        active.classList.add('bg-indigo-50', 'text-indigo-600', 'font-medium');
+        active.classList.remove('text-slate-600', 'hover:bg-slate-100');
+      }
+      if (name === 'datasource') loadDataSources();
+    }
+
+    // Load data sources
+    async function loadDataSources() {
+      try {
+        const [status, stats, exports] = await Promise.all([
+          api('/api/pipeline/status'),
+          fetchEntryStats(30),
+          listExports(),
+        ]);
+        // Platform status cards
+        const platforms = stats.by_platform || {};
+        const statusEl = document.getElementById('dataSourceStatus');
+        const cards = Object.entries(platforms).map(([p, count]) => {
+          const label = PLATFORM_LABELS[p] || p;
+          return `<div class="border border-slate-100 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-500"></span><span class="font-medium text-sm">${label}</span></div>
+            <p class="text-2xl font-bold text-slate-900">${count}</p>
+            <p class="text-xs text-slate-400">条目</p>
+          </div>`;
+        }).join('');
+        statusEl.innerHTML = cards || '<div class="text-sm text-slate-400">暂无数据</div>';
+
+        // Pipeline info
+        const pipelineEl = document.getElementById('pipelineInfo');
+        const lastRun = status.last_run_at ? formatTime(status.last_run_at) : '从未运行';
+        pipelineEl.innerHTML = `<div class="grid grid-cols-2 gap-4">
+          <div class="bg-slate-50 rounded-xl p-4"><div class="text-xs text-slate-400 mb-1">流水线状态</div><div class="text-sm font-medium ${status.pipeline_running ? 'text-amber-600' : 'text-green-600'}">${status.pipeline_running ? '运行中' : '空闲'}</div></div>
+          <div class="bg-slate-50 rounded-xl p-4"><div class="text-xs text-slate-400 mb-1">最后运行</div><div class="text-sm font-medium">${lastRun}</div></div>
+          <div class="bg-slate-50 rounded-xl p-4"><div class="text-xs text-slate-400 mb-1">总条目数</div><div class="text-sm font-medium">${stats.total_entries}</div></div>
+          <div class="bg-slate-50 rounded-xl p-4"><div class="text-xs text-slate-400 mb-1">追踪品牌</div><div class="text-sm font-medium">${(stats.top_brands || []).length}</div></div>
+        </div>`;
+
+        // Exports
+        const exportsEl = document.getElementById('exportsList');
+        if (exports.files && exports.files.length) {
+          exportsEl.innerHTML = exports.files.map(f =>
+            `<div class="flex justify-between items-center py-2 border-b border-slate-50 last:border-0 text-sm"><span>${escapeHtml(f.name)}</span><span class="text-slate-400">${(f.size / 1024).toFixed(1)} KB</span></div>`
+          ).join('');
+        } else {
+          exportsEl.innerHTML = '<div class="text-sm text-slate-400">暂无导出文件</div>';
+        }
+      } catch (e) {
+        console.error('Data sources load error:', e);
+      }
+    }
+
+    // Brand management
     async function loadBrands() {
       try {
         const resp = await fetch('/api/brands');
@@ -135,7 +239,6 @@
           </tr>
         `).join('');
 
-        // Attach delete handlers
         document.querySelectorAll('.delete-brand').forEach(btn => {
           btn.addEventListener('click', async () => {
             const id = btn.dataset.id;
@@ -144,9 +247,7 @@
               const resp = await fetch(`/api/brands/${encodeURIComponent(id)}`, { method: 'DELETE' });
               if (!resp.ok) throw new Error('Delete failed');
               await loadBrands();
-            } catch (e) {
-              alert('删除失败: ' + e.message);
-            }
+            } catch (e) { alert('删除失败: ' + e.message); }
           });
         });
       } catch (e) {
@@ -155,21 +256,24 @@
       }
     }
 
-    // Modal handling
     function showModal() { document.getElementById('addBrandModal').classList.remove('hidden'); }
     function hideModal() { document.getElementById('addBrandModal').classList.add('hidden'); }
 
     document.addEventListener('DOMContentLoaded', () => {
       loadBrands();
 
+      // Section navigation
+      document.querySelectorAll('.settings-nav').forEach(btn => {
+        btn.addEventListener('click', () => switchSection(btn.dataset.section));
+      });
+
+      // Modal
       document.getElementById('addBrandBtn')?.addEventListener('click', showModal);
       document.getElementById('closeModalBtn')?.addEventListener('click', hideModal);
       document.getElementById('cancelModalBtn')?.addEventListener('click', hideModal);
-      document.getElementById('addBrandModal')?.addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) hideModal();
-      });
+      document.getElementById('addBrandModal')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) hideModal(); });
 
-      // Save new brand
+      // Save brand
       document.getElementById('saveBrandBtn')?.addEventListener('click', async () => {
         const id = document.getElementById('formId').value.trim();
         const name = document.getElementById('formName').value.trim();
@@ -177,34 +281,18 @@
         const url = document.getElementById('formUrl').value.trim();
         const enabled = document.getElementById('formEnabled').checked;
         const errEl = document.getElementById('formError');
-
-        if (!id || !name || !uid || !url) {
-          errEl.textContent = '请填写所有必填字段';
-          errEl.classList.remove('hidden');
-          return;
-        }
+        if (!id || !name || !uid || !url) { errEl.textContent = '请填写所有必填字段'; errEl.classList.remove('hidden'); return; }
         errEl.classList.add('hidden');
-
         try {
-          const resp = await fetch('/api/brands', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, name, weibo_uid: uid, weibo_url: url, platforms: ['weibo'], enabled }),
-          });
-          if (!resp.ok) {
-            const errData = await resp.json();
-            throw new Error(errData.detail || '保存失败');
-          }
+          const resp = await fetch('/api/brands', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, name, weibo_uid: uid, weibo_url: url, platforms: ['weibo'], enabled }) });
+          if (!resp.ok) { const errData = await resp.json(); throw new Error(errData.detail || '保存失败'); }
           hideModal();
-          // Clear form
-          ['formId','formName','formUid','formUrl'].forEach(f => document.getElementById(f).value = '');
+          ['formId', 'formName', 'formUid', 'formUrl'].forEach(f => document.getElementById(f).value = '');
           document.getElementById('formEnabled').checked = true;
           await loadBrands();
-        } catch (e) {
-          errEl.textContent = e.message;
-          errEl.classList.remove('hidden');
-        }
+        } catch (e) { errEl.textContent = e.message; errEl.classList.remove('hidden'); }
       });
     });
   </script>
 </body>
+</html>

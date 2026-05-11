@@ -6,10 +6,13 @@ Serves frontend static files and exposes endpoints to trigger/manage the pipelin
 """
 import sys
 import json
+import re
 import logging
+import time as _time
 from pathlib import Path
-from typing import Dict, Any
-from datetime import datetime
+from typing import Dict, Any, Optional
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta
 
 # Ensure project root is in path
 _root = Path(__file__).parent
@@ -35,6 +38,45 @@ from langgraph.workflow import run_full_pipeline, print_pipeline_result
 from src.agents.searcher.content_tagging_agent import ContentTaggingAgent
 
 logger = logging.getLogger("server")
+
+# ── 口腔护理行业过滤 ──
+_ORAL_KEYWORDS = [
+    "牙膏", "牙刷", "电动牙刷", "口腔", "牙齿", "美白", "冲牙器", "漱口水", "牙线", "牙贴",
+    "toothpaste", "toothbrush", "oral", "dental", "teeth", "whitening", "mouthwash",
+    "usmile", "笑容加", "参半", "倍至", "佳洁士", "高露洁", "BOP", "冷酸灵", "舒客",
+    "云南白药", "黑人牙膏", "狮王", "欧乐B", "Oral-B", "飞利浦sonicare", "Sonicare",
+    "洁牙", "口臭", "蛀牙", "龋齿", "正畸", "牙科", "洗牙", "补牙", "拔牙",
+]
+
+# 永久黑名单：与口腔护理无关的 FOLO 订阅来源
+_BLOCKED_SOURCES = [
+    "1x.com", "macrumors.com", "github.blog", "vox.com", "smzdm.com",
+    "theverge.com", "tophub.today", "apod.nasa.gov",
+    "x.com/elonmusk", "x.com/GeminiApp", "x.com/sama",
+    "x.com/AnthropicAI", "x.com/OpenAI",
+    "t.me/s/durov",
+    "youtube.com/channel/UCXuqSBlHAE6Xw",
+    "youtube.com/channel/UCrDwWp7EBBv4",
+]
+
+def _is_oral_related(entry: dict) -> bool:
+    """判断条目是否与口腔护理行业相关。先检查来源黑名单，再检查文本关键词，最后检查 OCR 结果。"""
+    src = (entry.get("source_url") or "").lower()
+    if any(blocked.lower() in src for blocked in _BLOCKED_SOURCES):
+        return False
+    text = " ".join(filter(None, [
+        entry.get("title", ""),
+        entry.get("content", ""),
+        (entry.get("engagement_metrics") or {}).get("nickname", ""),
+        (entry.get("engagement_metrics") or {}).get("feed_title", ""),
+        (entry.get("engagement_metrics") or {}).get("author", ""),
+    ]))
+    text_lower = text.lower()
+    if any(kw.lower() in text_lower for kw in _ORAL_KEYWORDS):
+        return True
+    # OCR 结果也纳入判断
+    ocr = (entry.get("engagement_metrics") or {}).get("ocr_analysis") or {}
+    return bool(ocr.get("brands") or ocr.get("products"))
 
 # ── FastAPI App ──
 
@@ -66,6 +108,144 @@ def _retag_missing():
                 json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
         except Exception as e:
             logger.warning(f"Could not save entries_store after retag: {e}")
+
+
+def _ocr_missing():
+    """对 entries_store 里缺少 ocr_analysis 的条目补做 OCR，并持久化。"""
+    from src.agents.searcher.ocr_agent import OCRAgent
+    from src.utils.config import get_ocr_agent_config
+
+    entries_to_process = [
+        u for u in entries_store.values()
+        if not (u.get("engagement_metrics") or {}).get("ocr_analysis")
+    ]
+    # 只处理有图片/视频的条目
+    entries_to_process = [
+        u for u in entries_to_process
+        if (u.get("media_urls") or u.get("thumbnail_url")
+            or (u.get("raw_data") or {}).get("image_list"))
+    ]
+    if not entries_to_process:
+        return
+
+    config = get_ocr_agent_config()
+    if not config.get("ocr_enabled", True):
+        return
+    # 批量 OCR 只处理 1 张图/条以加快速度
+    config["ocr_max_images"] = 1
+
+    logger.info(f"Running OCR on {len(entries_to_process)} entries missing ocr_analysis...")
+    agent = OCRAgent(config)
+    processed = 0
+    for entry in entries_to_process:
+        try:
+            agent.process_entry(entry)
+            processed += 1
+            if processed % 50 == 0:
+                logger.info(f"OCR progress: {processed}/{len(entries_to_process)} entries processed")
+                # 中间持久化
+                try:
+                    with open(_STORE_PATH, "w", encoding="utf-8") as f:
+                        json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"OCR failed for {entry.get('id', '?')}: {e}")
+    logger.info(f"OCR completed: {processed}/{len(entries_to_process)} entries processed")
+
+    # 持久化
+    try:
+        with open(_STORE_PATH, "w", encoding="utf-8") as f:
+            json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+    except Exception as e:
+        logger.warning(f"Could not save entries_store after OCR: {e}")
+
+
+def _fix_xhs_timestamps() -> Dict[str, Any]:
+    """批量修复 XHS 条目的 published_at：从 explore 页面提取真实发布时间。"""
+    import requests as _requests
+
+    xhs_entries = [
+        (k, e) for k, e in entries_store.items()
+        if e.get("platform") == "xiaohongshu" and e.get("url")
+    ]
+    if not xhs_entries:
+        return {"total": 0, "fixed": 0, "failed": 0}
+
+    # 从 .env 读取 cookie
+    cookie_str = ""
+    env_path = _root / ".env"
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("XHS_COOKIES="):
+                cookie_str = line.strip().split("=", 1)[1].strip().strip('"').strip("'")
+                break
+
+    cookie_dict = {}
+    for pair in cookie_str.split(";"):
+        pair = pair.strip()
+        if "=" in pair:
+            k, v = pair.split("=", 1)
+            cookie_dict[k.strip()] = v.strip()
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    }
+
+    fixed = 0
+    failed = 0
+    now_ms = int(_time.time() * 1000)
+
+    for key, entry in xhs_entries:
+        url = entry.get("url", "")
+        try:
+            resp = _requests.get(url, headers=headers, cookies=cookie_dict, timeout=10)
+            if resp.status_code != 200:
+                failed += 1
+                continue
+
+            match = re.search(r'"time"\s*:\s*(\d{13})', resp.text)
+            if match:
+                ts_ms = int(match.group(1))
+                # 排除明显是当前时间的值（±5 分钟）
+                if abs(ts_ms - now_ms) > 300_000:
+                    dt = datetime.fromtimestamp(ts_ms / 1000)
+                    entry["published_at"] = dt
+                    fixed += 1
+                else:
+                    # 备选：从 INITIAL_STATE 中取最老的时间戳
+                    state_match = re.search(
+                        r'__INITIAL_STATE__\s*=\s*(\{.*?\})\s*</script>', resp.text, re.DOTALL
+                    )
+                    if state_match:
+                        ts_all = re.findall(r'(?<!\d)(\d{13})(?!\d)', state_match.group(1))
+                        candidates = [int(t) for t in ts_all if abs(int(t) - now_ms) > 300_000]
+                        if candidates:
+                            oldest = min(candidates)
+                            dt = datetime.fromtimestamp(oldest / 1000)
+                            entry["published_at"] = dt
+                            fixed += 1
+                        else:
+                            failed += 1
+                    else:
+                        failed += 1
+            else:
+                failed += 1
+        except Exception as e:
+            logger.debug(f"Fix timestamp failed for {key}: {e}")
+            failed += 1
+
+    # 持久化
+    if fixed > 0:
+        try:
+            with open(_STORE_PATH, "w", encoding="utf-8") as f:
+                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+        except Exception as e:
+            logger.warning(f"Could not save entries_store after timestamp fix: {e}")
+
+    logger.info(f"XHS timestamp fix: {fixed} fixed, {failed} failed out of {len(xhs_entries)}")
+    return {"total": len(xhs_entries), "fixed": fixed, "failed": failed}
 
 
 def _run_pipeline_background(force: bool = False):
@@ -106,7 +286,11 @@ def _run_pipeline_background(force: bool = False):
         except Exception as e:
             logger.warning(f"Could not save latest_result to disk: {e}")
         # 增量合并新条目到 entries_store，已存在条目在新数据有标签时覆盖
+        # 过滤：自动剔除只有"教程科普"标签的帖子（纯知识搬运，无商业价值）
         new_updates = result.get("OfficialUpdates", {}).get("updates", [])
+        new_updates = [u for u in new_updates if (u.get("engagement_metrics") or {}).get("ai_tags") != ["教程科普"]]
+        # 过滤：剔除与口腔护理行业无关的数据
+        new_updates = [u for u in new_updates if _is_oral_related(u)]
         added = 0
         updated = 0
         for u in new_updates:
@@ -128,6 +312,7 @@ def _run_pipeline_background(force: bool = False):
         except Exception as e:
             logger.warning(f"Could not save entries_store: {e}")
         _retag_missing()
+        _ocr_missing()
         logger.info("Background pipeline finished")
     except Exception as e:
         logger.error(f"Background pipeline failed: {e}", exc_info=True)
@@ -140,6 +325,7 @@ async def _startup():
     import asyncio
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, _retag_missing)
+    loop.run_in_executor(None, _ocr_missing)
     if not _HAS_APSCHEDULER:
         return
     scheduler = AsyncIOScheduler()
@@ -399,6 +585,164 @@ async def clear_entries():
     return {"success": True, "message": "entries_store cleared"}
 
 
+@app.post("/api/entries/fix-xhs-timestamps")
+async def fix_xhs_timestamps(background_tasks: BackgroundTasks):
+    """Batch-fix XHS entries' published_at from explore pages."""
+    background_tasks.add_task(_fix_xhs_timestamps)
+    return {"success": True, "message": "XHS timestamp fix started in background"}
+
+
+def _extract_brand_name(entry: dict) -> str:
+    raw = ((entry.get('engagement_metrics') or {}).get('feed_title')
+           or (entry.get('engagement_metrics') or {}).get('nickname')
+           or (entry.get('engagement_metrics') or {}).get('author')
+           or '')
+    name = re.sub(r'[\s]*(的)?[\s]*(微博|bilibili|b站|小红书|抖音|快手|微信)[\s]*(动态|笔记|视频)?', '', raw, flags=re.I).strip()
+    from src.agents.analyst.competitor_insight_agent import _normalize_brand
+    return _normalize_brand(name)
+
+
+def _filter_entries_by_days(entries, days: int):
+    if not days or days <= 0:
+        return entries
+    cutoff = datetime.now() - timedelta(days=days)
+    filtered = []
+    for e in entries:
+        pub = e.get('published_at', '')
+        if pub:
+            try:
+                dt = datetime.fromisoformat(pub.replace('Z', '+00:00'))
+                if dt >= cutoff:
+                    filtered.append(e)
+            except (ValueError, TypeError):
+                filtered.append(e)
+        else:
+            filtered.append(e)
+    return filtered
+
+
+@app.get("/api/entries/stats")
+async def entries_stats(days: int = 30, platform: str = ""):
+    """Aggregate statistics from entries_store."""
+    entries = list(entries_store.values())
+    if days > 0:
+        entries = _filter_entries_by_days(entries, days)
+    if platform:
+        entries = [e for e in entries if e.get('platform') == platform]
+
+    total = len(entries)
+    by_platform = dict(Counter(e.get('platform', 'unknown') for e in entries))
+    by_update_type = dict(Counter(e.get('update_type', 'brand_content') for e in entries))
+
+    # Top tags
+    all_tags = []
+    for e in entries:
+        tags = (e.get('engagement_metrics') or {}).get('ai_tags', [])
+        all_tags.extend(t for t in tags if t != '品牌联动')
+    top_tags = [{"tag": t, "count": c} for t, c in Counter(all_tags).most_common(20)]
+
+    # Entries per day
+    day_counts = defaultdict(int)
+    for e in entries:
+        pub = e.get('published_at', '')
+        if pub:
+            try:
+                d = datetime.fromisoformat(pub.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+                day_counts[d] += 1
+            except (ValueError, TypeError):
+                pass
+    entries_per_day = [{"date": d, "count": c} for d, c in sorted(day_counts.items())]
+
+    # Top brands
+    brand_counts = Counter(_extract_brand_name(e) for e in entries)
+    brand_counts.pop('', None)
+    top_brands = [{"brand": b, "count": c} for b, c in brand_counts.most_common(15)]
+
+    # Date range
+    dates = []
+    for e in entries:
+        pub = e.get('published_at', '')
+        if pub:
+            try:
+                dates.append(datetime.fromisoformat(pub.replace('Z', '+00:00')))
+            except (ValueError, TypeError):
+                pass
+    date_range = {}
+    if dates:
+        date_range = {"from": min(dates).strftime('%Y-%m-%d'), "to": max(dates).strftime('%Y-%m-%d')}
+
+    return {
+        "total_entries": total,
+        "by_platform": by_platform,
+        "by_update_type": by_update_type,
+        "top_tags": top_tags,
+        "entries_per_day": entries_per_day,
+        "top_brands": top_brands,
+        "date_range": date_range,
+    }
+
+
+@app.get("/api/entries/keyword-cloud")
+async def entries_keyword_cloud(days: int = 30, limit: int = 50):
+    """Keyword frequency for word cloud visualization."""
+    entries = list(entries_store.values())
+    if days > 0:
+        entries = _filter_entries_by_days(entries, days)
+    all_tags = []
+    for e in entries:
+        tags = (e.get('engagement_metrics') or {}).get('ai_tags', [])
+        all_tags.extend(t for t in tags if t != '品牌联动')
+    keywords = [{"text": t, "value": c} for t, c in Counter(all_tags).most_common(limit)]
+    return {"keywords": keywords}
+
+
+@app.get("/api/entries/feed")
+async def entries_feed(
+    page: int = 1,
+    per_page: int = 20,
+    platform: str = "",
+    update_type: str = "",
+    days: int = 0,
+    keyword: str = "",
+):
+    """Paginated entry feed with optional filters."""
+    entries = list(entries_store.values())
+    if days > 0:
+        entries = _filter_entries_by_days(entries, days)
+    if platform:
+        entries = [e for e in entries if e.get('platform') == platform]
+    if update_type:
+        entries = [e for e in entries if e.get('update_type') == update_type]
+    if keyword:
+        keyword_lower = keyword.lower()
+        entries = [e for e in entries
+                   if keyword_lower in (e.get('title', '') or '').lower()
+                   or keyword_lower in (e.get('content', '') or '').lower()]
+
+    # Sort by published_at desc
+    def _sort_key(e):
+        pub = e.get('published_at', '')
+        try:
+            return datetime.fromisoformat(pub.replace('Z', '+00:00'))
+        except (ValueError, TypeError):
+            return datetime.min
+    entries.sort(key=_sort_key, reverse=True)
+
+    total = len(entries)
+    pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, pages))
+    start = (page - 1) * per_page
+    page_entries = entries[start:start + per_page]
+
+    # Slim down entries for feed (remove raw_data to reduce payload)
+    slim = []
+    for e in page_entries:
+        d = {k: v for k, v in e.items() if k != 'raw_data'}
+        slim.append(d)
+
+    return {"entries": slim, "total": total, "page": page, "per_page": per_page, "pages": pages}
+
+
 @app.get("/api/insights/competitor")
 async def competitor_insights(brand: str = ""):
     """Generate competitive insights from entries_store."""
@@ -408,6 +752,190 @@ async def competitor_insights(brand: str = ""):
         return {"error": "No data available. Run pipeline first."}
     result = analyze(entries, target_brand=brand or None)
     return result
+
+
+# ── XHS Keyword Search API ──
+
+
+def _read_xhs_cookies() -> str:
+    """从 .env 读取 XHS_COOKIES。"""
+    env_path = _root / ".env"
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("XHS_COOKIES="):
+                val = line.strip().split("=", 1)[1].strip()
+                return val.strip('"').strip("'")
+    return ""
+
+
+@app.post("/api/xhs/search")
+async def xhs_keyword_search(request: Request, background_tasks: BackgroundTasks):
+    """按关键词搜索小红书笔记，自动评分、去重、入库。"""
+    body = await request.json()
+    keywords = body.get("keywords", [])
+    num_per_keyword = body.get("num", 20)
+
+    if not keywords:
+        raise HTTPException(status_code=400, detail="keywords 不能为空")
+
+    cookies = _read_xhs_cookies()
+    if not cookies:
+        raise HTTPException(status_code=500, detail="XHS_COOKIES 未配置")
+
+    from src.agents.searcher.xiaohongshu_updates_agent import XiaohongshuUpdatesAgent
+    agent = XiaohongshuUpdatesAgent({
+        "xhs_cookies": cookies,
+        "xhs_monitor_targets": [],
+        "lookback_hours": 720,
+    })
+
+    # 加载已有去重集
+    for k in entries_store:
+        agent.processed_updates.add(k)
+
+    try:
+        updates = agent.search_by_keywords(keywords, num_per_keyword)
+    except Exception as e:
+        logger.error(f"XHS search failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # 评分
+    agent.apply_scores(updates)
+
+    # 过滤：自动剔除只有"教程科普"标签的帖子（纯知识搬运，无商业价值）
+    updates = [u for u in updates if not ((u.engagement_metrics or {}).get("ai_tags") == ["教程科普"])]
+    # 过滤：剔除与口腔护理行业无关的数据
+    updates_dict = [u.model_dump() if hasattr(u, 'model_dump') else vars(u) for u in updates]
+    updates = [u for u, d in zip(updates, updates_dict) if _is_oral_related(d)]
+
+    # 增量合并入 entries_store
+    results = []
+    for kw in keywords:
+        kw_entries = [u for u in updates if u.source_url == f"xhs:keyword:{kw}"]
+        saved = 0
+        for u in kw_entries:
+            key = f"{u.source_url}:{u.id}"
+            if key not in entries_store:
+                entries_store[key] = u.model_dump() if hasattr(u, 'model_dump') else vars(u)
+                saved += 1
+        results.append({
+            "keyword": kw,
+            "found": len(kw_entries),
+            "saved": saved,
+        })
+
+    total_saved = sum(r["saved"] for r in results)
+
+    # 持久化
+    if total_saved > 0:
+        try:
+            with open(_STORE_PATH, "w", encoding="utf-8") as f:
+                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+        except Exception as e:
+            logger.warning(f"Could not save entries_store after search: {e}")
+        background_tasks.add_task(_retag_missing)
+
+    return {
+        "success": True,
+        "results": results,
+        "total_saved": total_saved,
+    }
+
+
+@app.get("/api/xhs/analysis")
+async def xhs_analysis(days: int = 30):
+    """分析关键词搜索结果的价值分布和宣发效果。"""
+    def _parse_int(v, default=0):
+        if isinstance(v, int):
+            return v
+        if isinstance(v, str):
+            try:
+                return int(v)
+            except ValueError:
+                return default
+        return default
+
+    # 筛选关键词搜索结果
+    keyword_entries = []
+    for e in entries_store.values():
+        src = e.get("source_url", "")
+        if "xhs:keyword:" not in src:
+            continue
+        if days > 0:
+            filtered = _filter_entries_by_days([e], days)
+            if not filtered:
+                continue
+        keyword_entries.append(e)
+
+    total = len(keyword_entries)
+
+    # 价值分级分布
+    tier_counts = {"S": 0, "A": 0, "B": 0, "C": 0}
+    for e in keyword_entries:
+        tier = (e.get("engagement_metrics") or {}).get("value_tier", "C")
+        tier_counts[tier] = tier_counts.get(tier, 0) + 1
+
+    # Top 10 高价值帖子
+    scored = [(e, (e.get("engagement_metrics") or {}).get("value_score", 0)) for e in keyword_entries]
+    scored.sort(key=lambda x: x[1], reverse=True)
+    top_posts = []
+    for e, score in scored[:10]:
+        top_posts.append({
+            "id": e.get("id"),
+            "title": e.get("title", "")[:80],
+            "value_score": score,
+            "value_tier": (e.get("engagement_metrics") or {}).get("value_tier", "C"),
+            "content_type": (e.get("engagement_metrics") or {}).get("content_type", "general"),
+            "url": e.get("url", ""),
+            "published_at": e.get("published_at", ""),
+            "liked_count": (e.get("engagement_metrics") or {}).get("liked_count", 0),
+            "comment_count": (e.get("engagement_metrics") or {}).get("comment_count", 0),
+        })
+
+    # 宣发手法效果分析（按 ai_tags 分组，计算平均互动值）
+    tag_engagement = defaultdict(lambda: {"count": 0, "total_engagement": 0})
+    for e in keyword_entries:
+        em = e.get("engagement_metrics") or {}
+        ai_tags = em.get("ai_tags", [])
+        engagement = (
+            _parse_int(em.get("liked_count", 0))
+            + _parse_int(em.get("comment_count", 0)) * 3
+            + _parse_int(em.get("collected_count", 0)) * 2
+            + _parse_int(em.get("share_count", 0)) * 2
+        )
+        for tag in ai_tags:
+            if tag == "品牌联动":
+                continue
+            tag_engagement[tag]["count"] += 1
+            tag_engagement[tag]["total_engagement"] += engagement
+
+    promo_effectiveness = []
+    for tag, data in tag_engagement.items():
+        avg = data["total_engagement"] // max(data["count"], 1)
+        promo_effectiveness.append({
+            "tag": tag,
+            "count": data["count"],
+            "avg_engagement": avg,
+        })
+    promo_effectiveness.sort(key=lambda x: x["avg_engagement"], reverse=True)
+
+    # 各关键词统计
+    kw_stats = defaultdict(lambda: {"total": 0, "S": 0, "A": 0, "B": 0, "C": 0})
+    for e in keyword_entries:
+        src = e.get("source_url", "")
+        kw = src.replace("xhs:keyword:", "")
+        tier = (e.get("engagement_metrics") or {}).get("value_tier", "C")
+        kw_stats[kw]["total"] += 1
+        kw_stats[kw][tier] = kw_stats[kw].get(tier, 0) + 1
+    keyword_stats = [{"keyword": k, **v} for k, v in kw_stats.items()]
+
+    return {
+        "total_searched": total,
+        "by_value_tier": tier_counts,
+        "top_posts": top_posts,
+        "promo_effectiveness": promo_effectiveness[:15],
+        "keyword_stats": keyword_stats,
+    }
 
 
 @app.post("/api/exports/upload")

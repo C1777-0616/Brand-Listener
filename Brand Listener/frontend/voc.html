@@ -26,39 +26,45 @@
   <!-- Main -->
   <div class="ml-64 p-8">
     <div class="flex items-center justify-between mb-6">
-      <div><h1 class="text-2xl font-bold text-slate-900">用户之声分析</h1><p class="text-sm text-slate-500 mt-1">全渠道用户反馈数据聚合与洞察</p></div>
-      <div class="flex items-center gap-2 text-sm text-slate-400"><iconify-icon icon="mdi:calendar-range"></iconify-icon><span id="dateRange">最近 24 小时</span><button class="border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50"><iconify-icon icon="mdi:filter-variant"></iconify-icon></button></div>
+      <div><h1 class="text-2xl font-bold text-slate-900">用户之声分析</h1><p class="text-sm text-slate-500 mt-1">全渠道内容标签与趋势洞察</p></div>
+      <div class="flex items-center gap-2 text-sm">
+        <div class="flex bg-white rounded-lg border border-slate-200 overflow-hidden">
+          <button class="days-btn px-3 py-1.5 hover:bg-slate-50 transition" data-days="7">7天</button>
+          <button class="days-btn px-3 py-1.5 bg-indigo-600 text-white font-medium" data-days="30">30天</button>
+          <button class="days-btn px-3 py-1.5 hover:bg-slate-50 transition" data-days="90">90天</button>
+        </div>
+      </div>
     </div>
 
     <!-- Top row -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-      <!-- Sentiment Pie -->
+      <!-- Content type pie -->
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <h3 class="font-semibold text-slate-900 mb-2">整体情感占比</h3>
-        <div id="sentimentPie" class="h-56"></div>
+        <h3 class="font-semibold text-slate-900 mb-2">内容类型分布</h3>
+        <div id="typePie" class="h-56"></div>
       </div>
       <!-- Keywords -->
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <h3 class="font-semibold text-slate-900 mb-2">高频关键词云</h3>
-        <div id="keywordCloud" class="flex flex-wrap gap-2 p-2">加载中...</div>
+        <h3 class="font-semibold text-slate-900 mb-2">高频标签云</h3>
+        <div id="keywordCloud" class="flex flex-wrap gap-2 p-2 max-h-56 overflow-y-auto">加载中...</div>
       </div>
       <!-- Source Bar -->
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <h3 class="font-semibold text-slate-900 mb-2">反馈来源分布</h3>
+        <h3 class="font-semibold text-slate-900 mb-2">来源平台分布</h3>
         <div id="sourceBar" class="h-56"></div>
       </div>
     </div>
 
     <!-- Bottom row -->
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-      <!-- Satisfaction -->
+      <!-- Top tags bar -->
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <h3 class="font-semibold text-slate-900 mb-4">主题分类满意度</h3>
-        <div id="satisfactionBars" class="space-y-4">加载中...</div>
+        <h3 class="font-semibold text-slate-900 mb-4">热门标签 TOP 10</h3>
+        <div id="topTagsBar" class="h-80"></div>
       </div>
       <!-- Real-time feed -->
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <h3 class="font-semibold text-slate-900 mb-3">最新全网原声 <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1"></span><span class="text-xs text-slate-400 font-normal ml-1">实时同步中</span></h3>
+        <h3 class="font-semibold text-slate-900 mb-3">最新内容动态 <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1"></span><span class="text-xs text-slate-400 font-normal ml-1">实时同步中</span></h3>
         <div id="feedbackFeed" class="space-y-3 max-h-[420px] overflow-y-auto">加载中...</div>
       </div>
     </div>
@@ -66,99 +72,127 @@
 
   <script src="/static/api.js"></script>
   <script>
-    let sentimentChart = null, sourceChart = null;
+    let typeChart = null, sourceChart = null, topTagsChart = null;
+    let currentDays = 30;
+    const TYPE_LABELS = { new_product: '新品发布', promotion: '促销活动', kol_collab: 'KOL合作', user_engagement: '用户互动', offline_event: '线下活动', corporate_news: '企业新闻', product_content: '产品内容', brand_content: '品牌内容' };
+    const PLATFORM_LABELS = { weibo: '微博', xiaohongshu: '小红书', bilibili: 'B站', douyin: '抖音' };
 
-    async function render() {
-      const data = await fetchPipelineData();
-      const smf = data.SocialMediaFeedback || {};
-      const spf = data.ShoppingFeedback || {};
-      const ufi = data.UserFeedbackInsights || {};
-      const socialItems = smf.items || [];
-      const shopItems = spf.items || [];
+    async function loadVOC(days) {
+      currentDays = days;
+      try {
+        const [stats, cloud, feed] = await Promise.all([
+          fetchEntryStats(days),
+          fetchKeywordCloud(days, 30),
+          fetchEntryFeed(1, 10, { days }),
+        ]);
+        renderTypePie(stats);
+        renderSourceBar(stats);
+        renderKeywordCloud(cloud);
+        renderTopTags(stats);
+        renderFeed(feed);
+        document.getElementById('dateRange')?.replaceWith(Object.assign(document.createElement('span'), { id: 'dateRange', className: 'text-xs text-slate-400', textContent: `最近 ${days} 天 · 共 ${stats.total_entries} 条` }));
+      } catch (e) { console.error('VOC load error:', e); }
+    }
 
-      // Sentiment distribution
-      const sentiments = { positive: 0, neutral: 0, negative: 0 };
-      socialItems.forEach(i => { sentiments[i.sentiment] = (sentiments[i.sentiment] || 0) + 1; });
-      shopItems.forEach(i => { sentiments[i.sentiment] = (sentiments[i.sentiment] || 0) + 1; });
-      if (!socialItems.length && !shopItems.length) { sentiments.positive = 65; sentiments.neutral = 25; sentiments.negative = 10; }
-
-      // Source distribution
-      const sources = {};
-      socialItems.forEach(i => { const p = i.platform || 'other'; sources[p] = (sources[p] || 0) + 1; });
-      shopItems.forEach(i => { const p = i.platform || 'other'; sources[p] = (sources[p] || 0) + 1; });
-      if (!Object.keys(sources).length) { sources['小红书'] = 850; sources['天猫'] = 420; sources['京东'] = 310; sources['抖音'] = 620; sources['微博'] = 150; }
-
-      // ECharts: sentiment pie
-      sentimentChart = echarts.init(document.getElementById('sentimentPie'));
-      sentimentChart.setOption({
+    function renderTypePie(stats) {
+      if (!typeChart) typeChart = echarts.init(document.getElementById('typePie'));
+      const types = stats.by_update_type || {};
+      const data = Object.entries(types).map(([k, v]) => ({ name: TYPE_LABELS[k] || k, value: v }));
+      typeChart.setOption({
         tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-        series: [{
-          type: 'pie', radius: ['40%', '70%'], center: ['50%', '45%'], avoidLabelOverlap: true,
-          itemStyle: { borderRadius: 4 },
-          label: { show: false }, emphasis: { label: { show: true } },
-          data: [
-            { value: sentiments.positive || 0, name: '正面回响', itemStyle: { color: '#22c55e' } },
-            { value: sentiments.neutral || 0, name: '中性观察', itemStyle: { color: '#94a3b8' } },
-            { value: sentiments.negative || 0, name: '负面反馈', itemStyle: { color: '#f43f5e' } },
-          ]
-        }],
-        legend: { bottom: 0, textStyle: { fontSize: 11 } },
+        legend: { bottom: 0, textStyle: { fontSize: 10 }, itemWidth: 10, itemHeight: 10 },
+        series: [{ type: 'pie', radius: ['35%', '65%'], center: ['50%', '42%'], label: { show: false }, emphasis: { label: { show: true } }, data }],
       });
+    }
 
-      // ECharts: source bar
-      sourceChart = echarts.init(document.getElementById('sourceBar'));
+    function renderSourceBar(stats) {
+      if (!sourceChart) sourceChart = echarts.init(document.getElementById('sourceBar'));
+      const platforms = stats.by_platform || {};
+      const labels = Object.keys(platforms).map(k => PLATFORM_LABELS[k] || k);
+      const values = Object.values(platforms);
       sourceChart.setOption({
         tooltip: { trigger: 'axis' },
         grid: { left: 5, right: 5, top: 10, bottom: 25, containLabel: false },
-        xAxis: { type: 'category', data: Object.keys(sources), axisLabel: { fontSize: 10, rotate: 20 }, axisTick: { show: false } },
+        xAxis: { type: 'category', data: labels, axisLabel: { fontSize: 10, rotate: 20 }, axisTick: { show: false } },
         yAxis: { show: false },
         series: [{
-          type: 'bar', data: Object.values(sources),
-          itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#4f46e5' }, { offset: 1, color: '#a5b4fc' }] }, borderRadius: [4,4,0,0] },
+          type: 'bar', data: values,
+          itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#4f46e5' }, { offset: 1, color: '#a5b4fc' }] }, borderRadius: [4, 4, 0, 0] },
           barWidth: '50%',
-        }]
+        }],
       });
-
-      // Keywords
-      const painPoints = ufi.pain_points || [];
-      const trends = ufi.trends || [];
-      const allKeywords = trends.map(t => t.trend_name).concat(painPoints.map(p => p.issue)).filter(Boolean);
-      const cloudEl = document.getElementById('keywordCloud');
-      if (allKeywords.length) {
-        const sizes = ['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl'];
-        const colors = ['bg-indigo-50 text-indigo-600', 'bg-blue-50 text-blue-600', 'bg-rose-50 text-rose-600', 'bg-amber-50 text-amber-600', 'bg-emerald-50 text-emerald-600', 'bg-purple-50 text-purple-600'];
-        cloudEl.innerHTML = allKeywords.map((k, i) => `<span class="${sizes[i % sizes.length]} ${colors[i % colors.length]} px-2.5 py-1 rounded-full font-medium">${escapeHtml(k)}</span>`).join('');
-      } else {
-        cloudEl.innerHTML = '<span class="text-sm text-slate-400">暂无关键词</span>';
-      }
-
-      // Satisfaction bars
-      document.getElementById('satisfactionBars').innerHTML = [
-        { label: '产品功能', pct: 88, detail: '满意度较高，AI 交互获好评' },
-        { label: '物流配送', pct: 75, detail: '时效有待提升，偏远地区尤甚' },
-        { label: '价格性价比', pct: 62, detail: '用户对定价敏感度上升' },
-      ].map(d => `<div><div class="flex justify-between text-sm mb-1"><span>${d.label}</span><span class="font-medium text-slate-900">${d.pct}%</span></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 rounded-full ${d.pct >= 80 ? 'bg-emerald-500' : d.pct >= 70 ? 'bg-amber-500' : 'bg-rose-500'}" style="width:${d.pct}%"></div></div><p class="text-xs text-slate-400 mt-1">${d.detail}</p></div>`).join("");
-
-      // Feedback feed
-      const allItems = [...socialItems, ...shopItems].slice(0, 10);
-      const feedEl = document.getElementById('feedbackFeed');
-      if (allItems.length) {
-        feedEl.innerHTML = allItems.map(item => {
-          const sentColor = item.sentiment === 'positive' ? 'text-green-600 bg-green-50' : item.sentiment === 'negative' ? 'text-rose-600 bg-rose-50' : 'text-slate-600 bg-slate-50';
-          return `<div class="flex gap-3 p-3 bg-slate-50 rounded-xl">
-            <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0"><iconify-icon icon="mdi:account" class="text-indigo-600"></iconify-icon></div>
-            <div class="flex-1 min-w-0"><div class="flex items-center gap-2 text-xs mb-0.5"><span class="font-medium text-slate-900">${escapeHtml(item.author_name || '用户')}</span><span class="text-slate-400">${item.platform || ''}</span><span class="text-slate-300">·</span><span class="text-slate-400">${formatTime(item.timestamp)}</span></div>
-            <p class="text-sm text-slate-700 line-clamp-2">${escapeHtml(item.content || item.review_content || '')}</p>
-            <div class="flex gap-1 mt-1"><span class="text-xs ${sentColor} px-1.5 py-0.5 rounded">${item.sentiment || 'neutral'}</span></div></div>
-          </div>`;
-        }).join("");
-      } else {
-        feedEl.innerHTML = '<div class="text-sm text-slate-400 text-center py-4">暂无反馈数据</div>';
-      }
-
-      window.addEventListener('resize', () => { sentimentChart?.resize(); sourceChart?.resize(); });
     }
-    document.addEventListener("DOMContentLoaded", render);
+
+    function renderKeywordCloud(cloud) {
+      const el = document.getElementById('keywordCloud');
+      const keywords = cloud.keywords || [];
+      if (!keywords.length) { el.innerHTML = '<span class="text-sm text-slate-400">暂无标签</span>'; return; }
+      const maxVal = Math.max(...keywords.map(k => k.value));
+      const sizes = ['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl'];
+      const colors = ['bg-indigo-50 text-indigo-600', 'bg-blue-50 text-blue-600', 'bg-rose-50 text-rose-600', 'bg-amber-50 text-amber-600', 'bg-emerald-50 text-emerald-600', 'bg-purple-50 text-purple-600'];
+      el.innerHTML = keywords.map((kw, i) => {
+        const ratio = kw.value / maxVal;
+        const sizeIdx = ratio > 0.8 ? 4 : ratio > 0.6 ? 3 : ratio > 0.4 ? 2 : ratio > 0.2 ? 1 : 0;
+        return `<span class="${sizes[sizeIdx]} ${colors[i % colors.length]} px-2.5 py-1 rounded-full font-medium">${escapeHtml(kw.text)} <span class="text-xs opacity-60">${kw.value}</span></span>`;
+      }).join('');
+    }
+
+    function renderTopTags(stats) {
+      if (!topTagsChart) topTagsChart = echarts.init(document.getElementById('topTagsBar'));
+      const tags = (stats.top_tags || []).slice(0, 10).reverse();
+      topTagsChart.setOption({
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        grid: { left: 100, right: 30, top: 10, bottom: 10 },
+        xAxis: { type: 'value', show: false },
+        yAxis: { type: 'category', data: tags.map(t => t.tag), axisLabel: { fontSize: 12 } },
+        series: [{
+          type: 'bar', data: tags.map(t => t.count),
+          itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: '#a5b4fc' }, { offset: 1, color: '#4f46e5' }] }, borderRadius: [0, 4, 4, 0] },
+          barWidth: '60%',
+          label: { show: true, position: 'right', fontSize: 11 },
+        }],
+      });
+    }
+
+    function renderFeed(feed) {
+      const el = document.getElementById('feedbackFeed');
+      const entries = feed.entries || [];
+      if (!entries.length) { el.innerHTML = '<div class="text-sm text-slate-400 text-center py-4">暂无数据</div>'; return; }
+      const PLATFORM_COLORS = { weibo: '#E6162D', xiaohongshu: '#FF2442', bilibili: '#00A1D6' };
+      const TYPE_ICONS = { weibo: 'mdi:sina-weibo', xiaohongshu: 'mdi:notebook', bilibili: 'mdi:television-classic' };
+      el.innerHTML = entries.map(e => {
+        const em = e.engagement_metrics || {};
+        const tags = (em.ai_tags || []).slice(0, 3);
+        const platform = e.platform || 'unknown';
+        const icon = TYPE_ICONS[platform] || 'mdi:file-document';
+        const platColor = PLATFORM_COLORS[platform] || '#94A3B8';
+        return `<div class="flex items-start gap-3 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition">
+          <iconify-icon icon="${icon}" class="text-xl mt-0.5" style="color:${platColor}"></iconify-icon>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-slate-900 truncate">${escapeHtml(e.title || '(无标题)')}</div>
+            <div class="text-xs text-slate-500 line-clamp-1 mt-0.5">${escapeHtml((e.content || '').slice(0, 80))}</div>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="text-xs text-slate-400">${formatTime(e.published_at)}</span>
+              ${tags.map(t => `<span class="text-xs bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">${escapeHtml(t)}</span>`).join('')}
+            </div>
+          </div>
+          ${e.url ? `<a href="${escapeHtml(e.url)}" target="_blank" class="text-slate-400 hover:text-indigo-600 mt-0.5"><iconify-icon icon="mdi:open-in-new"></iconify-icon></a>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.days-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.days-btn').forEach(b => { b.classList.remove('bg-indigo-600', 'text-white', 'font-medium'); b.classList.add('hover:bg-slate-50'); });
+          btn.classList.add('bg-indigo-600', 'text-white', 'font-medium');
+          btn.classList.remove('hover:bg-slate-50');
+          loadVOC(parseInt(btn.dataset.days));
+        });
+      });
+      loadVOC(currentDays);
+      window.addEventListener('resize', () => { typeChart?.resize(); sourceChart?.resize(); topTagsChart?.resize(); });
+    });
   </script>
 </body>
 </html>

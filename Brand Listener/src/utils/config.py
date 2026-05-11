@@ -160,10 +160,17 @@ def get_xhs_agent_config() -> Dict[str, Any]:
     except (_json.JSONDecodeError, TypeError):
         logger.warning(f"Invalid XHS_MONITOR_TARGETS JSON, using []")
         targets = []
+    search_kw_raw = get_env_var("XHS_SEARCH_KEYWORDS", "[]")
+    try:
+        search_keywords = _json.loads(search_kw_raw)
+    except (_json.JSONDecodeError, TypeError):
+        search_keywords = []
     return {
         "xhs_cookies": cookies,
         "xhs_monitor_targets": targets,
         "xhs_min_fans": get_env_int("XHS_MIN_FANS", 0),
+        "xhs_search_keywords": search_keywords,
+        "xhs_search_num": get_env_int("XHS_SEARCH_NUM", 20),
         "lookback_hours": FOLO_UPDATE_LOOKBACK_HOURS,
     }
 
@@ -174,6 +181,15 @@ def get_api_config() -> Dict[str, Any]:
         "host": API_HOST,
         "port": API_PORT,
         "reload": API_RELOAD
+    }
+
+
+def get_ocr_agent_config() -> Dict[str, Any]:
+    """Get OCR agent configuration."""
+    return {
+        "ocr_max_images": get_env_int("OCR_MAX_IMAGES", 3),
+        "ocr_timeout_seconds": get_env_int("OCR_TIMEOUT_SECONDS", 60),
+        "ocr_enabled": get_env_bool("OCR_ENABLED", True),
     }
 
 

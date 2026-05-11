@@ -377,8 +377,6 @@ class FileBasedFOLOExporter(FOLOExporter):
                     },
                     raw_data=dict(row),
                 )
-                if update.platform not in (Platform.WEIBO, Platform.BILIBILI):
-                    continue
                 updates.append(update)
             except Exception as e:
                 logger.warning(f"Skipping entry {row['id']}: {e}")

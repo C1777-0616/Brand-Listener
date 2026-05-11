@@ -48,3 +48,19 @@ function formatTime(isoStr) {
 function shortId() {
   return Math.random().toString(36).substring(2, 8);
 }
+
+async function fetchEntryStats(days = 30, platform = '') {
+  const params = new URLSearchParams({ days });
+  if (platform) params.set('platform', platform);
+  return api(`/api/entries/stats?${params}`);
+}
+
+async function fetchKeywordCloud(days = 30, limit = 50) {
+  return api(`/api/entries/keyword-cloud?days=${days}&limit=${limit}`);
+}
+
+async function fetchEntryFeed(page = 1, perPage = 20, filters = {}) {
+  const params = new URLSearchParams({ page, per_page: perPage });
+  Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+  return api(`/api/entries/feed?${params}`);
+}
