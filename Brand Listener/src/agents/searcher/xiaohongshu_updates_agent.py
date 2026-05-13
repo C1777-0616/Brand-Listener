@@ -784,7 +784,7 @@ class XiaohongshuUpdatesAgent:
                     note_info["upload_time"] = published_at.strftime("%Y-%m-%d %H:%M:%S")
 
                     # 去重
-                    dedup_key = f"xhs:keyword:{keyword}:{note_id}"
+                    dedup_key = note_id  # 同一帖子只存一次，不论命中哪个关键词
                     if dedup_key in self.processed_updates:
                         continue
 

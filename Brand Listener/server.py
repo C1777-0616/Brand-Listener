@@ -217,6 +217,34 @@ def _purge_clinic_ads():
             logger.warning(f"Could not save entries_store after purge: {e}")
 
 
+def _dedup_entries_store():
+    """启动时按 note_id 去重：同一 note_id 只保留一条。"""
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for k, v in entries_store.items():
+        note_id = k.rsplit(":", 1)[-1]
+        groups[note_id].append((k, v))
+
+    to_remove = []
+    for note_id, items in groups.items():
+        if len(items) <= 1:
+            continue
+        # 保留 source_url 最短的（品牌名 key 优先），其次保留先入库的
+        items.sort(key=lambda x: (len(x[1].get("source_url", "")), x[0]))
+        for k, _ in items[1:]:
+            to_remove.append(k)
+
+    for k in to_remove:
+        del entries_store[k]
+    if to_remove:
+        logger.info(f"Dedup: removed {len(to_remove)} duplicate entries by note_id")
+        try:
+            with open(_STORE_PATH, "w", encoding="utf-8") as f:
+                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+        except Exception as e:
+            logger.warning(f"Could not save entries_store after dedup: {e}")
+
+
 def _fix_xhs_timestamps() -> Dict[str, Any]:
     """批量修复 XHS 条目的 published_at：从 explore 页面提取真实发布时间。"""
     import requests as _requests
@@ -370,6 +398,7 @@ def _run_pipeline_background(force: bool = False):
         _retag_missing()
         _ocr_missing()
         _purge_clinic_ads()
+        _dedup_entries_store()
         logger.info("Background pipeline finished")
     except Exception as e:
         logger.error(f"Background pipeline failed: {e}", exc_info=True)
@@ -384,6 +413,7 @@ async def _startup():
     loop.run_in_executor(None, _retag_missing)
     loop.run_in_executor(None, _ocr_missing)
     loop.run_in_executor(None, _purge_clinic_ads)
+    loop.run_in_executor(None, _dedup_entries_store)
     if not _HAS_APSCHEDULER:
         return
     scheduler = AsyncIOScheduler()
@@ -847,9 +877,10 @@ async def xhs_keyword_search(request: Request, background_tasks: BackgroundTasks
         "lookback_hours": 720,
     })
 
-    # 加载已有去重集
+    # 加载已有去重集（提取 note_id 部分）
     for k in entries_store:
-        agent.processed_updates.add(k)
+        note_id = k.rsplit(":", 1)[-1]
+        agent.processed_updates.add(note_id)
 
     try:
         updates = agent.search_by_keywords(keywords, num_per_keyword)

@@ -73,6 +73,12 @@
 <option value="">全部类型</option>
 </select>
 </div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-slate-500">日期:</span>
+<input id="dateFrom" type="date" class="text-sm border border-slate-200 rounded-lg bg-slate-50 px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500"/>
+<span class="text-slate-400">—</span>
+<input id="dateTo" type="date" class="text-sm border border-slate-200 rounded-lg bg-slate-50 px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500"/>
+</div>
 <div class="ml-auto relative">
 <input id="searchInput" class="pl-10 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-64" placeholder="搜索关键词..." type="text"/>
 <iconify-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" icon="mdi:magnify"></iconify-icon>
@@ -401,6 +407,8 @@
     const brand = document.getElementById('brandSelect').value;
     const type = document.getElementById('typeSelect').value;
     const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
     if (allEntries.length === 0) {
       document.querySelectorAll('.mock-card').forEach(el => el.style.display = '');
       return;
@@ -415,6 +423,12 @@
         if (extractBrandName(raw) !== brand) return false;
       }
       if (type && (e.update_type || 'brand_content') !== type) return false;
+      if (dateFrom || dateTo) {
+        if (!e.published_at) return false;
+        const pubDate = e.published_at.slice(0, 10);
+        if (dateFrom && pubDate < dateFrom) return false;
+        if (dateTo && pubDate > dateTo) return false;
+      }
       if (keyword) {
         const searchText = ((e.title || '') + ' ' + (e.content || '')).toLowerCase();
         if (!searchText.includes(keyword)) return false;
@@ -445,7 +459,33 @@
   let socialSearched = false;
   let socialSearchError = '';
   let socialTierFilter = '';
+  let socialCategoryFilter = '';
   let socialSortBy = 'value';
+  const SOCIAL_CATEGORIES = {
+    '牙膏': ['牙膏', '美白牙膏', '抗敏牙膏', '儿童牙膏', '亮白牙膏', '白牙膏'],
+    '电动牙刷': ['电动牙刷', '声波牙刷', '电刷', '电动牙刷推荐'],
+    '牙刷': ['牙刷'],
+    '冲牙器': ['冲牙器', '水牙线', '洁牙器', '台式冲牙器'],
+    '漱口水': ['漱口水', '口腔清新剂'],
+    '牙线': ['牙线', '牙线棒'],
+    '牙齿美白': ['牙齿美白', '牙贴', '美白仪', '冷光美白'],
+    '口腔健康': ['口腔健康', '口腔护理', '口腔卫生'],
+  };
+  function setSocialCategoryFilter(c) { socialCategoryFilter = c; renderSocialTab(); }
+  function matchSocialCategory(entry, cat) {
+    if (!cat) return true;
+    const text = ((entry.title || '') + ' ' + (entry.content || '')).toLowerCase();
+    const source = (entry.source_url || '').toLowerCase();
+    const keywords = SOCIAL_CATEGORIES[cat] || [];
+    const matched = keywords.some(kw => text.includes(kw.toLowerCase()) || source.includes(kw.toLowerCase()));
+    if (!matched) return false;
+    // "牙刷"品类排除电动牙刷帖子
+    if (cat === '牙刷') {
+      const electricKw = SOCIAL_CATEGORIES['电动牙刷'] || [];
+      return !electricKw.some(kw => text.includes(kw.toLowerCase()) || source.includes(kw.toLowerCase()));
+    }
+    return true;
+  }
   let socialLastSearchTime = null;
 
   function getSocialItems() {
@@ -458,6 +498,9 @@
 
     if (socialTierFilter) {
       items = items.filter(e => (e.engagement_metrics || {}).value_tier === socialTierFilter);
+    }
+    if (socialCategoryFilter) {
+      items = items.filter(e => matchSocialCategory(e, socialCategoryFilter));
     }
 
     if (socialSortBy === 'value') {
@@ -474,6 +517,8 @@
     const all = getSocialItems();
     const tierCounts = {S: 0, A: 0, B: 0, C: 0};
     all.forEach(e => { const t = (e.engagement_metrics || {}).value_tier || 'C'; tierCounts[t] = (tierCounts[t]||0)+1; });
+    const catCounts = {};
+    Object.keys(SOCIAL_CATEGORIES).forEach(c => { catCounts[c] = all.filter(e => matchSocialCategory(e, c)).length; });
     const total = all.length;
 
     const tagStats = {};
@@ -545,6 +590,18 @@
           <div style="font-size:24px;font-weight:700;">${tierCounts.C}</div>
           <div style="font-size:12px;${socialTierFilter==='C'?'color:#cbd5e1':'color:#64748b'};">C级 低价值</div>
         </div>
+      </div>`;
+
+      // 品类筛选
+      html += `<div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:13px;color:#64748b;flex-shrink:0;">品类:</span>
+        <span onclick="setSocialCategoryFilter('')" style="padding:4px 14px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid ${!socialCategoryFilter?'#6366f1':'#e2e8f0'};background:${!socialCategoryFilter?'#6366f1':'#fff'};color:${!socialCategoryFilter?'#fff':'#475569'};font-weight:500;">全部 (${total})</span>
+        ${Object.keys(SOCIAL_CATEGORIES).map(c => {
+          const cnt = catCounts[c] || 0;
+          if (cnt === 0) return '';
+          const active = socialCategoryFilter === c;
+          return `<span onclick="setSocialCategoryFilter('${c}')" style="padding:4px 14px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid ${active?'#6366f1':'#e2e8f0'};background:${active?'#6366f1':'#fff'};color:${active?'#fff':'#475569'};font-weight:500;">${c} (${cnt})</span>`;
+        }).join('')}
       </div>`;
 
       if (topTags.length > 0) {
@@ -1105,6 +1162,8 @@
     document.getElementById('brandSelect').addEventListener('change', renderFeed);
     document.getElementById('typeSelect').addEventListener('change', renderFeed);
     document.getElementById('searchInput').addEventListener('input', renderFeed);
+    document.getElementById('dateFrom').addEventListener('change', renderFeed);
+    document.getElementById('dateTo').addEventListener('change', renderFeed);
     loadFeed();
   });
 </script>
