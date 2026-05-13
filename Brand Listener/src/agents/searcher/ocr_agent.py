@@ -31,6 +31,24 @@ class OCRAgent:
         self.timeout_seconds = config.get("ocr_timeout_seconds", 60)
         self.enabled = config.get("ocr_enabled", True)
         self._ocr_engine = None
+        self._xhs_cookies = self._parse_cookies(config.get("xhs_cookies", ""))
+        self._download_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        }
+
+    @staticmethod
+    def _parse_cookies(cookie_str: str) -> dict:
+        """解析浏览器格式 cookie 字符串为 dict。"""
+        cookies = {}
+        if not cookie_str:
+            return cookies
+        for pair in cookie_str.split(";"):
+            pair = pair.strip()
+            if "=" in pair:
+                k, v = pair.split("=", 1)
+                cookies[k.strip()] = v.strip()
+        return cookies
 
     def _get_ocr_engine(self):
         """懒加载 EasyOCR 单例。"""
@@ -49,14 +67,31 @@ class OCRAgent:
                 return None
         return self._ocr_engine
 
+    @staticmethod
+    def _xhs_to_ci_url(url: str) -> str:
+        """将 XHS CDN URL 转换为 ci.xiaohongshu.com 无水印格式。非 XHS CDN URL 原样返回。"""
+        if "notes_pre_post/" in url:
+            token = "notes_pre_post/" + url.split("notes_pre_post/", 1)[1].split("!", 1)[0].split("?", 1)[0]
+            return f"https://ci.xiaohongshu.com/{token}?imageView2/format/jpeg"
+        return url
+
     def _download_image(self, url: str) -> Optional[Any]:
-        """下载图片并返回 numpy array。失败返回 None。"""
+        """下载图片并返回 numpy array。XHS CDN URL 自动转为 ci.xiaohongshu.com 格式。失败返回 None。"""
         try:
             import cv2
             import numpy as np
 
-            resp = requests.get(url, timeout=10)
+            # XHS CDN 图片需要转换为 ci.xiaohongshu.com 格式才能下载
+            download_url = self._xhs_to_ci_url(url)
+            resp = requests.get(
+                download_url, timeout=10,
+                headers=self._download_headers,
+            )
             resp.raise_for_status()
+            ct = resp.headers.get("Content-Type", "")
+            if "image" not in ct:
+                logger.debug(f"OCRAgent: non-image response ({ct[:30]}) for {download_url[:80]}")
+                return None
             img_array = np.frombuffer(resp.content, np.uint8)
             img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
             return img
@@ -126,16 +161,17 @@ class OCRAgent:
         url_lower = url.lower()
         return any(url_lower.endswith(ext) for ext in video_exts) or 'sns-video' in url_lower
 
-    def process_entry(self, entry: Dict) -> Dict:
+    def process_entry(self, entry: Dict, force: bool = False) -> Dict:
         """处理单条帖子：下载图片→OCR→匹配关键词。
 
         将结果写入 entry["engagement_metrics"]["ocr_analysis"]。
+        force=True 时重新处理已有结果的条目。
         返回 ocr_analysis dict。
         """
         em = entry.setdefault("engagement_metrics", {})
 
-        # 已处理过则跳过
-        if em.get("ocr_analysis"):
+        # 已处理过则跳过（除非 force=True）
+        if not force and em.get("ocr_analysis"):
             return em["ocr_analysis"]
 
         image_urls = self._extract_image_urls(entry)

@@ -111,20 +111,34 @@ def _retag_missing():
 
 
 def _ocr_missing():
-    """对 entries_store 里缺少 ocr_analysis 的条目补做 OCR，并持久化。"""
+    """对 entries_store 里缺少 ocr_analysis 的条目补做 OCR，并持久化。
+
+    同时清除之前因 cookie 失败产生的空 ocr_analysis，以便重新处理。
+    """
     from src.agents.searcher.ocr_agent import OCRAgent
     from src.utils.config import get_ocr_agent_config
 
-    entries_to_process = [
-        u for u in entries_store.values()
-        if not (u.get("engagement_metrics") or {}).get("ocr_analysis")
-    ]
-    # 只处理有图片/视频的条目
-    entries_to_process = [
-        u for u in entries_to_process
+    entries_to_process = []
+    for u in entries_store.values():
+        em = u.get("engagement_metrics") or {}
+        ocr = em.get("ocr_analysis")
+        if ocr:
+            # 清除之前因 cookie 过期导致下载失败的空结果：
+            # ocr_analysis 存在但 brands/products/raw_texts 全空，且有 media 可处理
+            has_media = (u.get("media_urls") or u.get("thumbnail_url")
+                         or (u.get("raw_data") or {}).get("image_list"))
+            is_stale = (not ocr.get("brands") and not ocr.get("products")
+                        and not ocr.get("raw_texts") and not ocr.get("error")
+                        and has_media)
+            if is_stale:
+                del em["ocr_analysis"]  # 清除以便重新处理
+            else:
+                continue  # 有效的 ocr_analysis，跳过
+        # 检查是否有媒体可处理
         if (u.get("media_urls") or u.get("thumbnail_url")
-            or (u.get("raw_data") or {}).get("image_list"))
-    ]
+                or (u.get("raw_data") or {}).get("image_list")):
+            entries_to_process.append(u)
+
     if not entries_to_process:
         return
 
@@ -139,9 +153,9 @@ def _ocr_missing():
     processed = 0
     for entry in entries_to_process:
         try:
-            agent.process_entry(entry)
+            agent.process_entry(entry, force=True)
             processed += 1
-            if processed % 50 == 0:
+            if processed % 10 == 0:
                 logger.info(f"OCR progress: {processed}/{len(entries_to_process)} entries processed")
                 # 中间持久化
                 try:
@@ -834,6 +848,7 @@ async def xhs_keyword_search(request: Request, background_tasks: BackgroundTasks
         except Exception as e:
             logger.warning(f"Could not save entries_store after search: {e}")
         background_tasks.add_task(_retag_missing)
+        background_tasks.add_task(_ocr_missing)
 
     return {
         "success": True,

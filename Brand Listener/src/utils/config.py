@@ -190,6 +190,7 @@ def get_ocr_agent_config() -> Dict[str, Any]:
         "ocr_max_images": get_env_int("OCR_MAX_IMAGES", 3),
         "ocr_timeout_seconds": get_env_int("OCR_TIMEOUT_SECONDS", 60),
         "ocr_enabled": get_env_bool("OCR_ENABLED", True),
+        "xhs_cookies": get_env_var("XHS_COOKIES", ""),
     }
 
 
