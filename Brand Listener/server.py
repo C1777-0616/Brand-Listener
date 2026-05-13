@@ -862,11 +862,10 @@ async def xhs_keyword_search(request: Request, background_tasks: BackgroundTasks
 
     # 过滤：自动剔除只有"教程科普"标签的帖子（纯知识搬运，无商业价值）
     updates = [u for u in updates if not ((u.engagement_metrics or {}).get("ai_tags") == ["教程科普"])]
-    # 过滤：剔除与口腔护理行业无关的数据
+    # 过滤：剔除与口腔护理行业无关的数据 + 口腔医院/诊所广告
     updates_dict = [u.model_dump() if hasattr(u, 'model_dump') else vars(u) for u in updates]
-    updates = [u for u, d in zip(updates, updates_dict) if _is_oral_related(d)]
-    # 过滤：剔除口腔医院/诊所广告（仅关键词搜索帖子）
-    updates = [u for u, d in zip(updates, updates_dict) if not _is_clinic_ad(d)]
+    updates = [u for u, d in zip(updates, updates_dict)
+               if _is_oral_related(d) and not _is_clinic_ad(d)]
 
     # 增量合并入 entries_store
     results = []
