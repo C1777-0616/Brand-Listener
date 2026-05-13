@@ -59,6 +59,33 @@ _BLOCKED_SOURCES = [
     "youtube.com/channel/UCrDwWp7EBBv4",
 ]
 
+# 口腔医院/诊所广告过滤（仅用于小红书关键词搜索帖子）
+_CLINIC_NICKNAME_BLOCKERS = [
+    "口腔医院", "口腔门诊", "口腔诊所", "牙科诊所", "口腔中心",
+    "口腔专科", "齿科", "齿科美学", "家庭齿科", "牙齿贴面",
+    "口腔连锁", "口腔",  # 昵称含"口腔"基本都是诊所账号
+]
+_CLINIC_CONTENT_BLOCKERS = [
+    "口腔医院", "口腔门诊", "牙科诊所", "种植牙", "全瓷牙",
+    "根管治疗", "烤瓷牙", "隐形矫正", "牙周治疗", "全瓷贴面",
+    "瓷贴面", "树脂贴面", "义诊", "公益口腔",
+]
+
+def _is_clinic_ad(entry: dict) -> bool:
+    """判断帖子是否为口腔医院/诊所广告。"""
+    em = entry.get("engagement_metrics") or {}
+    nickname = (entry.get("nickname") or entry.get("author")
+                or em.get("nickname") or "").lower()
+    for kw in _CLINIC_NICKNAME_BLOCKERS:
+        if kw in nickname:
+            return True
+    text = f"{entry.get('title', '')} {entry.get('content', '')}".lower()
+    for kw in _CLINIC_CONTENT_BLOCKERS:
+        if kw in text:
+            return True
+    return False
+
+
 def _is_oral_related(entry: dict) -> bool:
     """判断条目是否与口腔护理行业相关。先检查来源黑名单，再检查文本关键词，最后检查 OCR 结果。"""
     src = (entry.get("source_url") or "").lower()
@@ -173,6 +200,21 @@ def _ocr_missing():
             json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
     except Exception as e:
         logger.warning(f"Could not save entries_store after OCR: {e}")
+
+
+def _purge_clinic_ads():
+    """从 entries_store 中删除已有的口腔医院广告（仅 xhs:keyword 条目）。"""
+    to_remove = [k for k, v in entries_store.items()
+                 if k.startswith("xhs:keyword:") and _is_clinic_ad(v)]
+    for k in to_remove:
+        del entries_store[k]
+    if to_remove:
+        logger.info(f"Purged {len(to_remove)} clinic ads from xhs:keyword entries")
+        try:
+            with open(_STORE_PATH, "w", encoding="utf-8") as f:
+                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+        except Exception as e:
+            logger.warning(f"Could not save entries_store after purge: {e}")
 
 
 def _fix_xhs_timestamps() -> Dict[str, Any]:
@@ -327,6 +369,7 @@ def _run_pipeline_background(force: bool = False):
             logger.warning(f"Could not save entries_store: {e}")
         _retag_missing()
         _ocr_missing()
+        _purge_clinic_ads()
         logger.info("Background pipeline finished")
     except Exception as e:
         logger.error(f"Background pipeline failed: {e}", exc_info=True)
@@ -340,6 +383,7 @@ async def _startup():
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, _retag_missing)
     loop.run_in_executor(None, _ocr_missing)
+    loop.run_in_executor(None, _purge_clinic_ads)
     if not _HAS_APSCHEDULER:
         return
     scheduler = AsyncIOScheduler()
@@ -821,6 +865,8 @@ async def xhs_keyword_search(request: Request, background_tasks: BackgroundTasks
     # 过滤：剔除与口腔护理行业无关的数据
     updates_dict = [u.model_dump() if hasattr(u, 'model_dump') else vars(u) for u in updates]
     updates = [u for u, d in zip(updates, updates_dict) if _is_oral_related(d)]
+    # 过滤：剔除口腔医院/诊所广告（仅关键词搜索帖子）
+    updates = [u for u, d in zip(updates, updates_dict) if not _is_clinic_ad(d)]
 
     # 增量合并入 entries_store
     results = []
