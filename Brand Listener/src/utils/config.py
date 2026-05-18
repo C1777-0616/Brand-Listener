@@ -153,7 +153,7 @@ def get_task_dispatcher_agent_config() -> Dict[str, Any]:
 def get_xhs_agent_config() -> Dict[str, Any]:
     """Get XiaohongshuUpdatesAgent configuration."""
     import json as _json
-    cookies = get_env_var("XHS_COOKIES", "")
+    api_token = get_env_var("XHS_API_TOKEN", "")
     targets_raw = get_env_var("XHS_MONITOR_TARGETS", "[]")
     try:
         targets = _json.loads(targets_raw)
@@ -166,7 +166,7 @@ def get_xhs_agent_config() -> Dict[str, Any]:
     except (_json.JSONDecodeError, TypeError):
         search_keywords = []
     return {
-        "xhs_cookies": cookies,
+        "xhs_api_token": api_token,
         "xhs_monitor_targets": targets,
         "xhs_min_fans": get_env_int("XHS_MIN_FANS", 0),
         "xhs_search_keywords": search_keywords,

@@ -1,42 +1,25 @@
 """
 XiaohongshuUpdatesAgent — 小红书数据采集子 agent。
 
-基于 Spider_XHS 项目的小红书 API 封装，监听固定博主的最新笔记。
+基于 Proxy API 的小红书数据采集，支持搜索、博主监听、评论分析。
 """
 import os
-import sys
 import re
 import json
 import logging
 import time as _time
-from pathlib import Path
 from datetime import datetime, timedelta
-from urllib.parse import urlparse, parse_qs
 from typing import List, Dict, Any, Optional
 
 import requests as _requests
 
-# 将 Spider_XHS 根目录加入 sys.path，使 apis / xhs_utils 可被导入
-_XHS_ROOT = str(Path(__file__).resolve().parent.parent.parent.parent / "agents" / "searcher" / "xhs_spider" / "Spider_XHS-3.0.0")
-if _XHS_ROOT not in sys.path:
-    sys.path.insert(0, _XHS_ROOT)
-
 from src.agents.searcher.keyword_dicts import match_keywords, BRAND_KEYWORDS, PRODUCT_KEYWORDS, INGREDIENT_KEYWORDS
 
-# 让 Node.js (PyExecJS) 能找到 spider 的 node_modules 中的 crypto-js / jsdom
-_XHS_NODE_MODULES = str(Path(_XHS_ROOT) / "node_modules")
-_current_node_path = os.environ.get("NODE_PATH", "")
-if _XHS_NODE_MODULES not in _current_node_path:
-    os.environ["NODE_PATH"] = _XHS_NODE_MODULES + (os.pathsep + _current_node_path if _current_node_path else "")
-
-# JS 文件中用相对路径 require 其他 JS 包，必须从 spider 根目录导入
-_cwd = os.getcwd()
-os.chdir(_XHS_ROOT)
-try:
-    from apis.xhs_pc_apis import XHS_Apis
-    from xhs_utils.data_util import handle_user_info, handle_note_info
-finally:
-    os.chdir(_cwd)
+# ── 新 Proxy API 模块 ──
+from src.agents.searcher.xhs_api.note_search import XHSNoteSearch
+from src.agents.searcher.xhs_api.user_notes import XHSUserNotes
+from src.agents.searcher.xhs_api.note_detail import XHSNoteDetail
+from src.agents.searcher.xhs_api.note_comments import XHSNoteComments
 
 from ...data_models.official_updates import OfficialUpdate, Platform, UpdateType
 
@@ -59,6 +42,9 @@ _REVIEW_KEYWORDS = ["测评", "体验", "使用", "效果", "亲测", "一个月
 _KOL_KEYWORDS = ["种草", "好用", "推荐", "安利", "回购", "好物", "必入", "值得"]
 _TUTORIAL_KEYWORDS = ["教程", "科普", "怎么选", "怎么用", "方法", "步骤", "攻略", "指南", "技巧"]
 _SHARE_KEYWORDS = ["分享", "日常", "开箱", "入手", "买了", "囤货"]
+
+# 2026-01-01 时间戳（用于过滤非2026帖子）
+_CUTOFF_2026 = datetime(2026, 1, 1)
 
 
 def _is_monitored_brand(nickname: str) -> bool:
@@ -185,18 +171,13 @@ def _score_entry(entry: dict) -> dict:
     content = (entry.get("content") or "").strip()
     text = title + " " + content
 
-    # 从 raw_data 中尝试获取粉丝数（搜索 API 可能返回）
+    # 从 raw_data 中尝试获取粉丝数
     fans = 0
     raw = entry.get("raw_data") or {}
     if isinstance(raw, dict):
-        interact = raw.get("interact_info", {})
-        fans = _parse_int(interact.get("fans", 0))
-        # 也尝试从 note_card 获取
-        note_card = raw.get("note_card", {})
-        if isinstance(note_card, dict):
-            user_info = note_card.get("user", {})
-            if isinstance(user_info, dict):
-                fans = max(fans, _parse_int(user_info.get("fans", 0)))
+        user = raw.get("user", {})
+        if isinstance(user, dict):
+            fans = _parse_int(user.get("fans", 0))
 
     content_type, content_score = _classify_content_type(text, fans)
     engagement_score = _calc_engagement_score(em)
@@ -235,34 +216,6 @@ def _extract_post_info(title: str, content: str, nickname: str = "") -> dict:
     return match_keywords(text)
 
 
-def _parse_target(target: dict):
-    """从 target 配置中解析 user_id / xsec_token / xsec_source（复用 monitor_users.py 逻辑）。"""
-    user_id = target.get("user_id", "").strip()
-    xsec_token = target.get("xsec_token", "").strip()
-    xsec_source = target.get("xsec_source", "pc_search").strip() or "pc_search"
-    user_url = target.get("user_url", "").strip()
-    if user_url:
-        parsed = urlparse(user_url)
-        if not user_id:
-            user_id = parsed.path.split("/")[-1]
-        query = parse_qs(parsed.query)
-        if not xsec_token and query.get("xsec_token"):
-            xsec_token = query["xsec_token"][0]
-        if query.get("xsec_source"):
-            xsec_source = query["xsec_source"][0]
-    return user_id, xsec_token, xsec_source
-
-
-def _parse_upload_time(upload_time_str: str) -> Optional[datetime]:
-    """将 handle_note_info 输出的 'YYYY-MM-DD HH:MM:SS' 字符串解析为 datetime。"""
-    if not upload_time_str:
-        return None
-    try:
-        return datetime.strptime(upload_time_str, "%Y-%m-%d %H:%M:%S")
-    except (ValueError, TypeError):
-        return None
-
-
 def _parse_int(v, default=0) -> int:
     """安全地将值转为 int（处理字符串 '77' 等情况）。"""
     if isinstance(v, int):
@@ -275,100 +228,62 @@ def _parse_int(v, default=0) -> int:
     return default
 
 
-def _parse_relative_time(text: str) -> Optional[datetime]:
-    """解析小红书搜索结果中的时间格式。
+def _parse_note_from_api(note: dict, source: str) -> dict:
+    """统一解析 Proxy API 返回的笔记数据。
 
-    支持:
-    - 相对时间: '3分钟前', '2小时前', '昨天', '3天前', '1周前', '2个月前'
-    - 月日绝对时间: '04-05', '4-5' (自动推断年份)
+    适用于搜索 API 和用户笔记 API 两种数据源。
+    搜索 API 返回 items[].note，用户笔记返回 notes[]（无 note 包装）。
     """
-    if not text:
-        return None
-    text = text.strip()
-    now = datetime.now()
-    try:
-        if "分钟" in text:
-            mins = int("".join(c for c in text if c.isdigit()) or "0")
-            return now - timedelta(minutes=mins)
-        if "小时" in text:
-            hours = int("".join(c for c in text if c.isdigit()) or "0")
-            return now - timedelta(hours=hours)
-        if text == "昨天":
-            return now - timedelta(days=1)
-        if "天" in text:
-            days = int("".join(c for c in text if c.isdigit()) or "0")
-            return now - timedelta(days=days)
-        if "周" in text:
-            weeks = int("".join(c for c in text if c.isdigit()) or "0")
-            return now - timedelta(weeks=weeks)
-        if "个月" in text or "月" in text:
-            months = int("".join(c for c in text if c.isdigit()) or "0")
-            return now - timedelta(days=months * 30)
-        if "年" in text:
-            years = int("".join(c for c in text if c.isdigit()) or "0")
-            return now - timedelta(days=years * 365)
+    # 搜索 API 的 items 有 note 包装层：{"model_type": "note", "note": {...}}
+    if "note" in note and isinstance(note.get("note"), dict):
+        note = note["note"]
 
-        # MM-DD 月日格式 (如 "04-05", "4-5")
-        import re as _re
-        m = _re.match(r'^(\d{1,2})-(\d{1,2})$', text)
-        if m:
-            month, day = int(m.group(1)), int(m.group(2))
-            if 1 <= month <= 12 and 1 <= day <= 31:
-                year = now.year
-                try:
-                    result = datetime(year, month, day)
-                except ValueError:
-                    return None
-                # 如果日期在未来，说明是去年的
-                if result > now + timedelta(days=1):
-                    result = datetime(year - 1, month, day)
-                return result
-    except (ValueError, TypeError):
-        return None
-    return None
-
-
-def _extract_publish_time(item: dict) -> Optional[datetime]:
-    """从搜索结果 note_card 的 corner_tag_info 中提取发布时间。"""
-    note_card = item.get("note_card", item)
-    corner_tags = note_card.get("corner_tag_info", [])
-    if isinstance(corner_tags, list):
-        for tag in corner_tags:
-            if isinstance(tag, dict) and tag.get("type") == "publish_time":
-                return _parse_relative_time(tag.get("text", ""))
-    return None
-
-
-def _parse_note_from_user_api(note: dict, note_url: str) -> dict:
-    """解析 get_user_note_info() 返回的笔记数据，输出与 handle_note_info() 相同格式的 dict。
-
-    用户笔记 API 返回结构与搜索 API 不同：没有 note_card 包装层。
-    """
-    note_id = note.get("note_id", "")
+    note_id = note.get("note_id") or note.get("id", "")
     note_type_raw = note.get("type", "")
     note_type = "视频" if note_type_raw == "video" else "图集"
 
     user = note.get("user", {})
-    user_id = user.get("user_id", "")
+    user_id = user.get("userid") or user.get("user_id", "")
     nickname = user.get("nickname") or user.get("nick_name", "")
 
-    title = note.get("display_title", "") or ""
+    title = note.get("display_title") or note.get("title", "") or ""
     desc = note.get("desc", "") or ""
 
-    interact_info = note.get("interact_info", {})
-    liked_count = _parse_int(interact_info.get("liked_count", 0))
-    collected_count = _parse_int(interact_info.get("collected_count", 0))
-    comment_count = _parse_int(interact_info.get("comment_count", 0))
-    share_count = _parse_int(interact_info.get("share_count", 0))
+    # 互动数据（两种 API 返回结构不同，做兼容）
+    interact_info = note.get("interact_info")
+    if interact_info:
+        liked_count = _parse_int(interact_info.get("liked_count", 0))
+        collected_count = _parse_int(interact_info.get("collected_count", 0))
+        comment_count = _parse_int(interact_info.get("comment_count", 0))
+        share_count = _parse_int(interact_info.get("share_count", 0))
+    else:
+        liked_count = _parse_int(note.get("liked_count", 0))
+        collected_count = _parse_int(note.get("collected_count", 0))
+        comment_count = _parse_int(note.get("comments_count", 0))
+        share_count = _parse_int(note.get("share_count", 0))
 
     # 图片列表
     image_list = []
-    cover = note.get("cover", {})
-    info_list = cover.get("info_list", [])
-    for img in info_list:
-        url = img.get("url", "")
+    images = note.get("images_list", [])
+    for img in images:
+        if isinstance(img, dict):
+            url = img.get("url", "")
+        elif isinstance(img, str):
+            url = img
+        else:
+            url = ""
         if url:
             image_list.append(url)
+
+    # 如果没有 images_list，尝试从 cover 获取
+    if not image_list:
+        cover = note.get("cover", {})
+        if isinstance(cover, dict):
+            info_list = cover.get("info_list", [])
+            for img in info_list:
+                url = img.get("url", "")
+                if url:
+                    image_list.append(url)
 
     # 视频
     video_addr = None
@@ -381,8 +296,28 @@ def _parse_note_from_user_api(note: dict, note_url: str) -> dict:
         if origin_key:
             video_addr = f"https://sns-video-bd.xhscdn.com/{origin_key}"
 
-    # 时间（用户笔记 API 没有直接返回时间戳，用 detected 时间或忽略）
+    # 时间戳：搜索 API 用 timestamp，用户笔记 API 用 create_time
+    timestamp = note.get("timestamp") or note.get("create_time")
     upload_time = ""
+    if timestamp:
+        if isinstance(timestamp, (int, float)):
+            if timestamp > 1e12:  # 毫秒级
+                timestamp = timestamp / 1000
+            try:
+                dt = datetime.fromtimestamp(timestamp)
+                upload_time = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except (ValueError, OSError):
+                pass
+
+    # xsec_token（搜索 API 返回的笔记需要拼接链接）
+    xsec_token = note.get("xsec_token", "")
+
+    # 构建笔记链接
+    if xsec_token:
+        xsec_source = note.get("xsec_source", "pc_search")
+        note_url = f"https://www.xiaohongshu.com/explore/{note_id}?xsec_token={xsec_token}&xsec_source={xsec_source}"
+    else:
+        note_url = f"https://www.xiaohongshu.com/explore/{note_id}"
 
     return {
         "note_id": note_id,
@@ -401,31 +336,35 @@ def _parse_note_from_user_api(note: dict, note_url: str) -> dict:
         "video_cover": video_cover,
         "video_addr": video_addr,
         "image_list": image_list,
-        "tags": [],
+        "tags": note.get("tag_list", []),
         "upload_time": upload_time,
-        "ip_location": "",
+        "ip_location": note.get("ip_location", ""),
+        # 保留原始数据供评分使用
+        "_raw_note": note,
     }
 
 
 class XiaohongshuUpdatesAgent:
-    """小红书数据采集子 agent，与 WeiboUpdatesAgent 并列。"""
+    """小红书数据采集子 agent，基于 Proxy API。"""
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.cookies_str: str = config.get("xhs_cookies", "")
+        self.api_token: str = config.get("xhs_api_token", "")
         self.monitor_targets: list = config.get("xhs_monitor_targets", [])
         self.min_fans: int = config.get("xhs_min_fans", 0)
         self.lookback_hours: int = config.get("lookback_hours", 24)
 
-        self.api = XHS_Apis()
+        # 初始化 Proxy API 客户端
+        self.searcher = XHSNoteSearch(self.api_token)
+        self.user_crawler = XHSUserNotes(self.api_token)
+        self.detail_crawler = XHSNoteDetail(self.api_token)
+        self.comments_crawler = XHSNoteComments(self.api_token)
+
         self.last_run_time: Optional[datetime] = None
         self.processed_updates: set = set()
 
-        # 缓存已查询的用户粉丝数，避免重复请求
-        self._fans_cache: Dict[str, int] = {}
-
     def since_time(self) -> datetime:
-        """计算数据回溯起始时间（同 WeiboUpdatesAgent 逻辑）。"""
+        """计算数据回溯起始时间。"""
         if self.last_run_time:
             since = self.last_run_time
         else:
@@ -435,8 +374,8 @@ class XiaohongshuUpdatesAgent:
 
     def fetch(self, sources: List[str], since: datetime) -> List[OfficialUpdate]:
         """获取小红书更新（固定博主监听）。"""
-        if not self.cookies_str:
-            logger.warning("XHS cookies 未配置，跳过小红书数据采集")
+        if not self.api_token:
+            logger.warning("XHS API Token 未配置，跳过小红书数据采集")
             return []
 
         updates: List[OfficialUpdate] = []
@@ -461,51 +400,41 @@ class XiaohongshuUpdatesAgent:
                 continue
 
             name = target.get("name", "未知博主")
-            user_id, xsec_token, xsec_source = _parse_target(target)
+            user_id = target.get("user_id", "").strip()
             if not user_id:
-                logger.warning(f"[XHS] 博主 '{name}' 无法解析 user_id，跳过")
+                logger.warning(f"[XHS] 博主 '{name}' 缺少 user_id，跳过")
                 continue
 
-            # 粉丝数筛选
-            if self.min_fans > 0:
-                fans = self._get_user_fans(user_id)
-                if fans is not None and fans < self.min_fans:
-                    logger.debug(f"[XHS] 博主 '{name}' 粉丝数 {fans} < {self.min_fans}，跳过")
-                    continue
-
-            # 获取最新笔记
-            success, msg, res_json = self.api.get_user_note_info(
-                user_id=user_id,
-                cursor="",
-                cookies_str=self.cookies_str,
-                xsec_token=xsec_token,
-                xsec_source=xsec_source,
-            )
-            if not success:
-                if self._is_cookie_expired(msg):
-                    logger.warning(f"[XHS] Cookie 可能已过期，请更新 XHS_COOKIES: {msg}")
-                else:
-                    logger.warning(f"[XHS] 博主 '{name}' 获取笔记失败: {msg}")
+            # 获取用户笔记（第一页）
+            result = self.user_crawler.get_user_notes(user_id)
+            if not result.get("success"):
+                logger.warning(f"[XHS] 博主 '{name}' 获取笔记失败: {result.get('message')}")
                 continue
 
-            notes = res_json.get("data", {}).get("notes", [])
+            data = result.get("data", {})
+            notes = data.get("notes", [])
+
             for note in notes:
                 note_id = note.get("note_id") or note.get("id")
-                note_token = note.get("xsec_token") or xsec_token
-                if not note_id or not note_token:
+                if not note_id:
                     continue
 
-                note_url = f"https://www.xiaohongshu.com/explore/{note_id}?xsec_token={note_token}&xsec_source={xsec_source}"
-
-                # 优先调用详情 API 获取真实时间戳
-                note_info = self._fetch_note_detail(note_url, note, name)
-                if note_info is None:
-                    continue
+                note_info = _parse_note_from_api(note, f"xhs:{name}")
 
                 # 30天过滤
-                published_at = _parse_upload_time(note_info.get("upload_time", ""))
+                published_at = None
+                if note_info.get("upload_time"):
+                    try:
+                        published_at = datetime.strptime(note_info["upload_time"], "%Y-%m-%d %H:%M:%S")
+                    except ValueError:
+                        pass
+
                 if published_at and published_at < max_age:
                     logger.debug(f"[XHS] 笔记 {note_id} 发布于 {published_at:%Y-%m-%d}，超过30天，跳过")
+                    continue
+
+                # 2026过滤
+                if published_at and published_at < _CUTOFF_2026:
                     continue
 
                 update = self._to_official_update(note_info, f"xhs:{name}")
@@ -513,96 +442,8 @@ class XiaohongshuUpdatesAgent:
 
         return updates
 
-    def _fetch_note_detail(self, note_url: str, fallback_note: dict, blogger_name: str) -> Optional[dict]:
-        """从笔记页面 HTML 提取真实时间戳，失败时回退到列表数据。"""
-        # 先用列表数据构建基础 note_info
-        try:
-            note_info = _parse_note_from_user_api(fallback_note, note_url)
-        except Exception:
-            return None
-
-        # 尝试从 explore 页面获取真实时间戳
-        upload_time = self._fetch_time_from_page(note_url)
-        if upload_time:
-            note_info["upload_time"] = upload_time
-        else:
-            logger.debug(f"[XHS] 无法获取笔记时间戳 {note_url[:60]}，使用当前时间")
-
-        return note_info
-
-    def _fetch_time_from_page(self, note_url: str) -> str:
-        """从小红书 explore 页面 HTML 中提取笔记发布时间。"""
-        try:
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                              "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            }
-            # 将 cookie 字符串转为 dict
-            cookie_dict = {}
-            for pair in self.cookies_str.split(";"):
-                pair = pair.strip()
-                if "=" in pair:
-                    k, v = pair.split("=", 1)
-                    cookie_dict[k.strip()] = v.strip()
-
-            resp = _requests.get(note_url, headers=headers, cookies=cookie_dict, timeout=10)
-            if resp.status_code != 200:
-                return ""
-
-            # 从 __INITIAL_STATE__ 中提取 time 字段（毫秒级时间戳）
-            match = re.search(r'"time"\s*:\s*(\d{13})', resp.text)
-            if match:
-                ts_ms = int(match.group(1))
-                dt = _time.strftime("%Y-%m-%d %H:%M:%S", _time.localtime(ts_ms / 1000))
-                logger.debug(f"[XHS] 从页面提取时间: {dt}")
-                return dt
-
-            # 备选：从 window.__INITIAL_STATE__ JSON 中找 noteCard.time
-            state_match = re.search(
-                r'__INITIAL_STATE__\s*=\s*(\{.*?\})\s*</script>', resp.text, re.DOTALL
-            )
-            if state_match:
-                # 在 INITIAL_STATE 中搜索所有 13 位时间戳，取最小的（即笔记时间）
-                ts_all = re.findall(r'(?<!\d)(\d{13})(?!\d)', state_match.group(1))
-                if ts_all:
-                    # 过滤掉明显是当前时间的（±5 分钟内）
-                    now_ms = int(_time.time() * 1000)
-                    candidates = [int(t) for t in ts_all if abs(int(t) - now_ms) > 300_000]
-                    if candidates:
-                        oldest = min(candidates)
-                        dt = _time.strftime("%Y-%m-%d %H:%M:%S", _time.localtime(oldest / 1000))
-                        logger.debug(f"[XHS] 从 INITIAL_STATE 提取时间: {dt}")
-                        return dt
-
-        except Exception as e:
-            logger.debug(f"[XHS] 页面时间提取失败: {e}")
-
-        return ""
-
-    def _get_user_fans(self, user_id: str) -> Optional[int]:
-        """获取用户粉丝数（带缓存）。"""
-        if user_id in self._fans_cache:
-            return self._fans_cache[user_id]
-
-        success, msg, res_json = self.api.get_user_info(user_id, self.cookies_str)
-        if not success:
-            logger.debug(f"[XHS] 获取用户 {user_id} 信息失败: {msg}")
-            return None
-
-        try:
-            user_data = res_json.get("data", {})
-            user_info = handle_user_info(user_data, user_id)
-            fans = user_info.get("fans", 0)
-            if isinstance(fans, str):
-                fans = int(fans)
-            self._fans_cache[user_id] = fans
-            return fans
-        except Exception as e:
-            logger.debug(f"[XHS] 解析用户 {user_id} 信息失败: {e}")
-            return None
-
     def _to_official_update(self, note_info: Dict[str, Any], source_url: str) -> OfficialUpdate:
-        """将 handle_note_info 输出的 dict 转换为 OfficialUpdate。"""
+        """将解析后的笔记 dict 转换为 OfficialUpdate。"""
         note_id = note_info.get("note_id", "")
         title = note_info.get("title", "") or ""
         desc = note_info.get("desc", "") or ""
@@ -621,7 +462,12 @@ class XiaohongshuUpdatesAgent:
 
         # 发布时间
         upload_time_str = note_info.get("upload_time", "")
-        published_at = _parse_upload_time(upload_time_str) or datetime.now()
+        published_at = datetime.now()
+        if upload_time_str:
+            try:
+                published_at = datetime.strptime(upload_time_str, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                pass
 
         # 互动数据
         engagement_metrics = {
@@ -640,7 +486,7 @@ class XiaohongshuUpdatesAgent:
             id=str(note_id),
             source_url=source_url,
             platform=Platform.XIAOHONGSHU,
-            update_type=UpdateType.BRAND_CONTENT,  # 由 ContentClassificationAgent 后续分类
+            update_type=UpdateType.BRAND_CONTENT,
             title=title or None,
             content=desc,
             url=note_url or None,
@@ -648,11 +494,11 @@ class XiaohongshuUpdatesAgent:
             thumbnail_url=thumbnail_url,
             published_at=published_at,
             engagement_metrics=engagement_metrics,
-            raw_data=note_info,
+            raw_data=note_info.get("_raw_note", note_info),
         )
 
     def _dedup(self, updates: List[OfficialUpdate]) -> List[OfficialUpdate]:
-        """去重（同 WeiboUpdatesAgent 逻辑）。"""
+        """去重。"""
         unique: List[OfficialUpdate] = []
         for u in updates:
             key = f"{u.source_url}:{u.id}"
@@ -668,57 +514,66 @@ class XiaohongshuUpdatesAgent:
     ) -> List[OfficialUpdate]:
         """按关键词搜索小红书笔记，排除已监听品牌，自动去重。
 
-        多排序策略 + 翻页 + 软时间过滤：
-        - 综合排序: note_time=0 不限时间, 取2页 (覆盖高互动老帖子)
-        - 最新排序: note_time=3 半年内, 取1页 (保证新鲜度)
-        - 点赞排序: note_time=0 不限时间, 取3页 (覆盖高互动帖子)
-        - 30天内的帖子无条件保留, 30天外只保留加权互动分≥100的高价值帖子
+        多排序策略 + 翻页 + 2026年过滤：
+        - 综合排序: 半年内, 取2页 (覆盖高互动帖子)
+        - 最新排序: 半年内, 取1页 (保证新鲜度)
+        - 点赞排序: 半年内, 取3页 (覆盖高互动帖子)
 
         Returns:
             List of OfficialUpdate with value_score already applied.
         """
-        if not self.cookies_str:
-            logger.warning("XHS cookies 未配置，跳过关键词搜索")
+        if not self.api_token:
+            logger.warning("XHS API Token 未配置，跳过关键词搜索")
             return []
 
         all_updates: List[OfficialUpdate] = []
-        max_age_soft = datetime.now() - timedelta(days=30)   # 软过滤: 30天内无条件保留
-        max_age_hard = datetime.now() - timedelta(days=365)  # 硬过滤: 超过1年的不看
+
+        # 排序映射: 旧sort_type → 新sort参数
+        sort_map = {
+            0: "general",              # 综合
+            1: "time_descending",      # 最新
+            2: "popularity_descending", # 点赞
+        }
 
         for keyword in keywords:
             logger.info(f"[XHS] 搜索关键词: {keyword}")
             try:
                 # ── 多排序策略 + 翻页 ──
-                # (sort_type, note_time, pages)
+                # (旧sort_type, pages)
                 sort_configs = [
-                    (0, 0, 2),   # 综合: 不限时间, 2页 (40条)
-                    (1, 3, 1),   # 最新: 半年内,  1页 (20条)
-                    (2, 0, 3),   # 点赞: 不限时间, 3页 (60条)
+                    (0, 2),   # 综合: 2页
+                    (1, 1),   # 最新: 1页
+                    (2, 3),   # 点赞: 3页
                 ]
                 sort_names = {0: "综合", 1: "最新", 2: "点赞"}
 
                 all_items = {}  # note_id -> item (去重)
-                for sort_type, note_time, pages in sort_configs:
+                for sort_type, pages in sort_configs:
                     sname = sort_names.get(sort_type, str(sort_type))
+                    sort_param = sort_map.get(sort_type, "general")
+
                     for page in range(1, pages + 1):
-                        success, msg, res_json = self.api.search_note(
-                            query=keyword,
-                            cookies_str=self.cookies_str,
+                        result = self.searcher.search(
+                            keyword=keyword,
                             page=page,
-                            sort_type_choice=sort_type,
-                            note_type=0,
-                            note_time=note_time,
+                            sort=sort_param,
+                            note_time="半年内",
                         )
-                        if not success:
-                            logger.debug(f"[XHS] '{keyword}' {sname}排序p{page}搜索失败: {msg}")
-                            break  # 某页失败则停止该排序翻页
-                        items = res_json.get("data", {}).get("items", [])
+
+                        if not result.get("success"):
+                            logger.debug(f"[XHS] '{keyword}' {sname}排序p{page}搜索失败: {result.get('message')}")
+                            break
+
+                        data = result.get("data", {})
+                        items = data.get("items", [])
                         if not items:
-                            break  # 无更多结果
+                            break
+
                         for item in items:
-                            nid = item.get("id") or item.get("note_id")
+                            nid = item.get("note_id") or item.get("id") or item.get("note", {}).get("id") or item.get("note", {}).get("note_id")
                             if nid and nid not in all_items:
                                 all_items[nid] = item
+
                         logger.debug(f"[XHS] '{keyword}' {sname}p{page} 获取 {len(items)} 条")
 
                 if not all_items:
@@ -727,29 +582,9 @@ class XiaohongshuUpdatesAgent:
 
                 logger.info(f"[XHS] 关键词 '{keyword}' 多轮合并共 {len(all_items)} 条去重笔记")
 
-                # 过滤有效笔记
-                filtered = []
-                for item in all_items.values():
-                    model_type = item.get("model_type", "")
-                    note_id = item.get("id") or item.get("note_id")
-                    xsec_token = item.get("xsec_token")
-                    if (model_type in ("note", "note_v2", "note_card") or note_id) and xsec_token:
-                        filtered.append(item)
-
                 saved = 0
-                for item in filtered:
-                    note_id = item.get("id") or item.get("note_id")
-                    xsec_source = item.get("xsec_source", "pc_search")
-                    note_url = f"https://www.xiaohongshu.com/explore/{note_id}?xsec_token={item['xsec_token']}&xsec_source={xsec_source}"
-
-                    # 解析笔记信息
-                    try:
-                        note_data = dict(item)
-                        note_data["url"] = note_url
-                        note_info = handle_note_info(note_data)
-                    except Exception as e:
-                        logger.debug(f"[XHS] 解析笔记 {note_id} 失败: {e}")
-                        continue
+                for note_id, item in all_items.items():
+                    note_info = _parse_note_from_api(item, f"xhs:keyword:{keyword}")
 
                     # 排除已监听品牌
                     nickname = note_info.get("nickname", "")
@@ -757,39 +592,27 @@ class XiaohongshuUpdatesAgent:
                         logger.debug(f"[XHS] 跳过已监听品牌: {nickname}")
                         continue
 
-                    # ── 软时间过滤 ──
-                    published_at = _extract_publish_time(item)
+                    # ── 2026年过滤 ──
+                    published_at = None
+                    if note_info.get("upload_time"):
+                        try:
+                            published_at = datetime.strptime(note_info["upload_time"], "%Y-%m-%d %H:%M:%S")
+                        except ValueError:
+                            pass
+
                     if not published_at:
-                        # 时间缺失 → 跳过（宁可漏不可错）
                         logger.debug(f"[XHS] 笔记 {note_id} 时间缺失，跳过")
                         continue
-                    if published_at < max_age_hard:
-                        # 超过1年 → 硬性跳过
-                        logger.debug(f"[XHS] 笔记 {note_id} 超过1年，跳过")
+                    if published_at < _CUTOFF_2026:
+                        logger.debug(f"[XHS] 笔记 {note_id} 发布于 {published_at:%Y-%m-%d}，非2026年，跳过")
                         continue
 
-                    # 30天外的帖子 → 需要高互动才保留
-                    is_recent = published_at >= max_age_soft
-                    if not is_recent:
-                        liked = _parse_int(note_info.get("liked_count", 0))
-                        collected = _parse_int(note_info.get("collected_count", 0))
-                        comment = _parse_int(note_info.get("comment_count", 0))
-                        weighted = liked * 1 + comment * 3 + collected * 2
-                        if weighted < 100:
-                            logger.debug(f"[XHS] 笔记 {note_id} 超过30天且互动低(weighted={weighted})，跳过")
-                            continue
-                        logger.debug(f"[XHS] 笔记 {note_id} 超过30天但互动高(weighted={weighted})，保留")
-
-                    # 将解析出的真实时间注入 note_info（覆盖 handle_note_info 的空值）
-                    note_info["upload_time"] = published_at.strftime("%Y-%m-%d %H:%M:%S")
-
-                    # 去重
-                    dedup_key = note_id  # 同一帖子只存一次，不论命中哪个关键词
-                    if dedup_key in self.processed_updates:
+                    # 去重（跨关键词）
+                    if note_id in self.processed_updates:
                         continue
 
                     update = self._to_official_update(note_info, f"xhs:keyword:{keyword}")
-                    self.processed_updates.add(dedup_key)
+                    self.processed_updates.add(note_id)
                     all_updates.append(update)
                     saved += 1
 
@@ -815,7 +638,6 @@ class XiaohongshuUpdatesAgent:
             source_url = u.source_url or ""
             if source_url.startswith("xhs:keyword:"):
                 kw = source_url.replace("xhs:keyword:", "")
-                # 关键词本身是口腔护理相关 → 加相关性分
                 oral_kw = ["牙膏", "牙刷", "电动牙刷", "口腔", "牙齿", "美白", "冲牙器", "漱口水", "牙贴"]
                 if any(okw in kw for okw in oral_kw):
                     brk = scores.get("scoring_breakdown", {})
@@ -824,7 +646,6 @@ class XiaohongshuUpdatesAgent:
                         boost = 10 - old_rel
                         scores["scoring_breakdown"]["relevance_score"] = 10
                         scores["value_score"] = scores.get("value_score", 0) + boost
-                        # 重新分级
                         total = scores["value_score"]
                         scores["value_tier"] = "S" if total >= 70 else "A" if total >= 50 else "B" if total >= 30 else "C"
 
@@ -836,11 +657,3 @@ class XiaohongshuUpdatesAgent:
             if u.engagement_metrics is None:
                 u.engagement_metrics = {}
             u.engagement_metrics.update(scores)
-
-    @staticmethod
-    def _is_cookie_expired(msg: str) -> bool:
-        """判断 API 错误是否由 cookie 过期引起。"""
-        if not msg:
-            return False
-        msg_lower = str(msg).lower()
-        return any(kw in msg_lower for kw in ["登录", "login", "unauthorized", "auth", "cookie", "sesi"])

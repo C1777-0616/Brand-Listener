@@ -672,6 +672,7 @@
                       <span>相关${(em.scoring_breakdown||{}).relevance_score||0}</span>
                     </div>
                     ${u.url?`<a href="${escHtml(u.url)}" target="_blank" rel="noopener" style="padding:4px 12px;border:1px solid #e2e8f0;color:#475569;font-size:12px;font-weight:600;border-radius:6px;text-decoration:none;">查看原文</a>`:''}
+                    <button onclick="loadComments('${escHtml(u.id)}')" style="padding:4px 12px;border:1px solid #e2e8f0;color:#7c3aed;font-size:12px;font-weight:600;border-radius:6px;background:${_commentCache[u.id]?'#ede9fe':'#f5f3ff'};cursor:pointer;">查看评论${_commentCache[u.id]?' (已缓存)':''}</button>
                   </div>
                 </span>
               </div>
@@ -1157,6 +1158,139 @@
     container.innerHTML = html;
   }
 
+  // ── 评论查看 ──
+  const _commentCache = {};
+
+  async function loadComments(noteId, forceRefresh) {
+    const panel = document.getElementById('commentPanel');
+    const overlay = document.getElementById('commentOverlay');
+    const content = document.getElementById('commentContent');
+    panel.style.display = 'flex';
+    overlay.style.display = 'block';
+
+    // 缓存命中：直接渲染
+    if (!forceRefresh && _commentCache[noteId]) {
+      content.innerHTML = _commentCache[noteId];
+      return;
+    }
+
+    content.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;"><div style="margin-bottom:8px;">加载评论中...</div><div style="font-size:11px;color:#cbd5e1;">评论较多时可能需要1-2分钟，请耐心等待</div></div>';
+
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 180000);
+      const resp = await fetch(`/api/xhs/comments/${noteId}?sort=latest`, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!resp.ok) {
+        let errMsg = `HTTP ${resp.status}`;
+        try { const err = await resp.json(); errMsg = err.detail || errMsg; } catch {}
+        content.innerHTML = `<div style="text-align:center;padding:40px;color:#ef4444;">
+          <div style="margin-bottom:12px;">${escHtml(errMsg)}</div>
+          <button onclick="loadComments('${escHtml(noteId)}', true)" style="padding:6px 20px;background:#7c3aed;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">重试</button>
+        </div>`;
+        return;
+      }
+      const data = await resp.json();
+      if (!data.success) {
+        content.innerHTML = `<div style="text-align:center;padding:40px;color:#ef4444;">
+          <div style="margin-bottom:12px;">${escHtml(data.detail||'加载失败')}</div>
+          <button onclick="loadComments('${escHtml(noteId)}', true)" style="padding:6px 20px;background:#7c3aed;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">重试</button>
+        </div>`;
+        return;
+      }
+
+      const analysis = data.analysis || {};
+      const comments = data.comments || [];
+      const sentiment = analysis.sentiment || {positive:0,negative:0,neutral:0};
+      const sellingPoints = analysis.selling_points || [];
+      const total = analysis.total_comments || 0;
+
+      let html = '';
+
+      // 情感分析摘要
+      if (total > 0) {
+        const posPct = Math.round((sentiment.positive/total)*100);
+        const negPct = Math.round((sentiment.negative/total)*100);
+        const neuPct = 100 - posPct - negPct;
+
+        html += `<div style="padding:16px;background:#f8fafc;border-radius:12px;margin-bottom:16px;">
+          <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:12px;">评论情感分析 (共 ${total} 条)</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <div style="flex:${sentiment.positive||1};height:8px;background:#22c55e;border-radius:4px;" title="积极 ${sentiment.positive}"></div>
+            <div style="flex:${sentiment.neutral||1};height:8px;background:#94a3b8;border-radius:4px;" title="中性 ${sentiment.neutral}"></div>
+            <div style="flex:${sentiment.negative||1};height:8px;background:#ef4444;border-radius:4px;" title="负面 ${sentiment.negative}"></div>
+          </div>
+          <div style="display:flex;gap:16px;font-size:12px;">
+            <span style="color:#22c55e;font-weight:600;">积极 ${sentiment.positive} (${posPct}%)</span>
+            <span style="color:#94a3b8;font-weight:600;">中性 ${sentiment.neutral} (${neuPct}%)</span>
+            <span style="color:#ef4444;font-weight:600;">负面 ${sentiment.negative} (${negPct}%)</span>
+          </div>
+        </div>`;
+
+        // 卖点标签
+        if (sellingPoints.length > 0) {
+          html += `<div style="padding:12px;background:#fffbeb;border-radius:12px;margin-bottom:16px;">
+            <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px;">产品卖点标签</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              ${sellingPoints.map(sp => {
+                const bg = sp.sentiment==='positive'?'#dcfce7':'#fee2e2';
+                const color = sp.sentiment==='positive'?'#166534':'#991b1b';
+                const border = sp.sentiment==='positive'?'#bbf7d0':'#fecaca';
+                return `<span style="padding:3px 10px;background:${bg};color:${color};font-size:11px;font-weight:600;border-radius:12px;border:1px solid ${border};">${escHtml(sp.tag)} (${sp.count})</span>`;
+              }).join('')}
+            </div>
+          </div>`;
+        }
+      }
+
+      // 评论列表
+      html += `<div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:8px;">评论列表</div>`;
+      if (comments.length === 0) {
+        html += '<div style="text-align:center;padding:20px;color:#94a3b8;">暂无评论</div>';
+      } else {
+        const sentimentColors = {positive:'#22c55e', negative:'#ef4444', neutral:'#94a3b8'};
+        const sentimentLabels = {positive:'积极', negative:'负面', neutral:'中性'};
+
+        for (const c of comments) {
+          const user = c.user || {};
+          const contentText = c.content || '';
+          // 找到分析详情中对应的评论
+          const detail = (analysis.details||[]).find(d => d.content === contentText) || {};
+          const s = detail.sentiment || 'neutral';
+          const points = detail.selling_points || [];
+          const isSub = c.is_sub_comment;
+
+          html += `<div style="padding:10px 12px;border-bottom:1px solid #f1f5f9;${isSub?'margin-left:24px;background:#f8fafc;border-radius:8px;':''}">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span style="font-size:12px;font-weight:600;color:#1e293b;">${escHtml(user.nickname||'匿名')}</span>
+              <span style="padding:1px 6px;background:${sentimentColors[s]}22;color:${sentimentColors[s]};font-size:10px;font-weight:600;border-radius:4px;">${sentimentLabels[s]}</span>
+              ${isSub?'<span style="font-size:10px;color:#94a3b8;">回复</span>':''}
+            </div>
+            <div style="font-size:13px;color:#475569;line-height:1.5;">${escHtml(contentText)}</div>
+            ${points.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">${points.map(p=>`<span style="padding:1px 6px;background:#f0fdf4;color:#15803d;font-size:10px;border-radius:4px;border:1px solid #bbf7d0;">${escHtml(p)}</span>`).join('')}</div>`:''}
+          </div>`;
+        }
+      }
+
+      // 缓存 + 刷新按钮
+      const refreshHtml = `<div style="text-align:right;margin-bottom:8px;"><button onclick="loadComments('${escHtml(noteId)}', true)" style="padding:4px 12px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:12px;">刷新评论</button></div>`;
+      const finalHtml = refreshHtml + html;
+      _commentCache[noteId] = finalHtml;
+      content.innerHTML = finalHtml;
+    } catch (e) {
+      const msg = e.name === 'AbortError' ? '请求超时(3分钟)，评论量较大请重试' : escHtml(e.message);
+      content.innerHTML = `<div style="text-align:center;padding:40px;color:#ef4444;">
+        <div style="margin-bottom:12px;">${msg}</div>
+        <button onclick="loadComments('${escHtml(noteId)}')" style="padding:6px 20px;background:#7c3aed;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">重试</button>
+      </div>`;
+    }
+  }
+
+  function closeComments() {
+    document.getElementById('commentPanel').style.display = 'none';
+    document.getElementById('commentOverlay').style.display = 'none';
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('platformSelect').addEventListener('change', renderFeed);
     document.getElementById('brandSelect').addEventListener('change', renderFeed);
@@ -1176,6 +1310,16 @@
     <button onclick="closeInsight()" style="width:32px;height:32px;border-radius:8px;border:none;background:#f1f5f9;cursor:pointer;font-size:18px;color:#64748b;display:flex;align-items:center;justify-content:center;">×</button>
   </div>
   <div id="insightBody" style="flex:1;overflow-y:auto;padding:20px;"></div>
+</div>
+
+<!-- 评论查看面板 -->
+<div id="commentOverlay" onclick="closeComments()" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:59;"></div>
+<div id="commentPanel" style="display:none;position:fixed;top:0;right:0;bottom:0;width:480px;max-width:90vw;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,0.12);z-index:60;flex-direction:column;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e2e8f0;flex-shrink:0;">
+    <span style="font-size:16px;font-weight:700;color:#0f172a;">评论分析</span>
+    <button onclick="closeComments()" style="width:32px;height:32px;border-radius:8px;border:none;background:#f1f5f9;cursor:pointer;font-size:18px;color:#64748b;display:flex;align-items:center;justify-content:center;">×</button>
+  </div>
+  <div id="commentContent" style="flex:1;overflow-y:auto;padding:16px;"></div>
 </div>
 </body>
 </html>

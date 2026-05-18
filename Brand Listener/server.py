@@ -396,7 +396,6 @@ def _run_pipeline_background(force: bool = False):
         except Exception as e:
             logger.warning(f"Could not save entries_store: {e}")
         _retag_missing()
-        _ocr_missing()
         _purge_clinic_ads()
         _dedup_entries_store()
         logger.info("Background pipeline finished")
@@ -411,13 +410,12 @@ async def _startup():
     import asyncio
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, _retag_missing)
-    loop.run_in_executor(None, _ocr_missing)
     loop.run_in_executor(None, _purge_clinic_ads)
     loop.run_in_executor(None, _dedup_entries_store)
     if not _HAS_APSCHEDULER:
         return
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(_run_pipeline_background, "interval", minutes=15, id="auto_pipeline")
+    scheduler.add_job(_run_pipeline_background, "interval", minutes=15, id="auto_pipeline", next_run_time=None)
     scheduler.start()
     logger.info("APScheduler started — pipeline will auto-run every 15 minutes")
 
@@ -673,13 +671,6 @@ async def clear_entries():
     return {"success": True, "message": "entries_store cleared"}
 
 
-@app.post("/api/entries/fix-xhs-timestamps")
-async def fix_xhs_timestamps(background_tasks: BackgroundTasks):
-    """Batch-fix XHS entries' published_at from explore pages."""
-    background_tasks.add_task(_fix_xhs_timestamps)
-    return {"success": True, "message": "XHS timestamp fix started in background"}
-
-
 def _extract_brand_name(entry: dict) -> str:
     raw = ((entry.get('engagement_metrics') or {}).get('feed_title')
            or (entry.get('engagement_metrics') or {}).get('nickname')
@@ -845,12 +836,12 @@ async def competitor_insights(brand: str = ""):
 # ── XHS Keyword Search API ──
 
 
-def _read_xhs_cookies() -> str:
-    """从 .env 读取 XHS_COOKIES。"""
+def _read_xhs_api_token() -> str:
+    """从 .env 读取 XHS_API_TOKEN。"""
     env_path = _root / ".env"
     if env_path.exists():
         for line in env_path.read_text(encoding="utf-8").splitlines():
-            if line.strip().startswith("XHS_COOKIES="):
+            if line.strip().startswith("XHS_API_TOKEN="):
                 val = line.strip().split("=", 1)[1].strip()
                 return val.strip('"').strip("'")
     return ""
@@ -866,13 +857,13 @@ async def xhs_keyword_search(request: Request, background_tasks: BackgroundTasks
     if not keywords:
         raise HTTPException(status_code=400, detail="keywords 不能为空")
 
-    cookies = _read_xhs_cookies()
-    if not cookies:
-        raise HTTPException(status_code=500, detail="XHS_COOKIES 未配置")
+    token = _read_xhs_api_token()
+    if not token:
+        raise HTTPException(status_code=500, detail="XHS_API_TOKEN 未配置")
 
     from src.agents.searcher.xiaohongshu_updates_agent import XiaohongshuUpdatesAgent
     agent = XiaohongshuUpdatesAgent({
-        "xhs_cookies": cookies,
+        "xhs_api_token": token,
         "xhs_monitor_targets": [],
         "lookback_hours": 720,
     })
@@ -1026,6 +1017,51 @@ async def xhs_analysis(days: int = 30):
         "top_posts": top_posts,
         "promo_effectiveness": promo_effectiveness[:15],
         "keyword_stats": keyword_stats,
+    }
+
+
+@app.get("/api/xhs/comments/{note_id}")
+async def get_note_comments(note_id: str, sort: str = "latest"):
+    """获取小红书笔记评论（含情感分析 + 卖点标签）。"""
+    token = _read_xhs_api_token()
+    if not token:
+        raise HTTPException(status_code=500, detail="XHS_API_TOKEN 未配置")
+
+    from src.agents.searcher.xhs_api.note_comments import XHSNoteComments
+    from src.agents.searcher.comment_analyzer import analyze_comments
+
+    import asyncio
+
+    crawler = XHSNoteComments(token)
+
+    try:
+        result = await asyncio.to_thread(
+            crawler.get_all_comments,
+            note_id=note_id,
+            sort=sort,
+            fetch_sub_comments=True,
+            delay_seconds=0.2,
+            sub_comment_delay=0.1,
+            max_pages=20,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"获取评论失败: {e}")
+
+    if not result or not result.get("success"):
+        raise HTTPException(status_code=502, detail=result.get("message", "获取评论失败") if result else "空响应")
+
+    comments_data = result.get("data", {})
+    all_comments = comments_data.get("comments", [])
+
+    # 情感分析 + 卖点提取
+    analysis = analyze_comments(all_comments)
+
+    return {
+        "success": True,
+        "note_id": note_id,
+        "comments": all_comments,
+        "total_comments": len(all_comments),
+        "analysis": analysis,
     }
 
 
