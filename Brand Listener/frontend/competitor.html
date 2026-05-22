@@ -356,6 +356,7 @@
                 <span class="text-sm text-slate-400 font-mono whitespace-nowrap ml-4">${time}</span>
               </div>
               <p class="text-slate-600 text-sm mb-4">${desc}</p>
+              ${(()=>{const cmts=u.engagement_metrics?.comments||[];const an=u.engagement_metrics?.comment_analysis||{};const s=an.sentiment||{};const t=an.total_comments||cmts.length;if(!t)return '';const pp=Math.round((s.positive||0)/t*100),np=Math.round((s.negative||0)/t*100);const ranked=(an.details||[]).filter(d=>d.sentiment!=='neutral').concat((an.details||[]).filter(d=>d.sentiment==='neutral'));const top=ranked.slice(0,3);return `<div class="mb-3 p-3 bg-slate-50 rounded-xl border border-slate-100"><div class="flex items-center gap-2 mb-2"><span class="text-[11px] font-bold text-slate-600">评论 ${t}条</span><div class="flex-1 h-1.5 flex rounded overflow-hidden"><div class="bg-green-500" style="flex:${s.positive||1}"></div><div class="bg-slate-400" style="flex:${s.neutral||1}"></div><div class="bg-red-500" style="flex:${s.negative||1}"></div></div><span class="text-[10px] text-green-600 font-semibold">${pp}%</span><span class="text-[10px] text-red-500 font-semibold">${np}%</span></div>${top.map(c=>{const badge=c.sentiment==='positive'?'<span class="text-[9px] text-green-600 bg-green-50 px-1 rounded">积极</span>':c.sentiment==='negative'?'<span class="text-[9px] text-red-500 bg-red-50 px-1 rounded">负面</span>':'';return `<div class="text-xs text-slate-500 truncate mt-0.5">${badge}<span class="text-slate-700 font-semibold">${escHtml(c.nickname||'')}：</span>${escHtml((c.content||'').slice(0,60))}</div>`}).join('')}</div>`})()}
               <div class="flex items-center gap-6">
                 <div class="ml-auto flex gap-2">
                   <button onclick="showInsight('${escHtml(brandName)}')" class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100">生成对标建议</button>
@@ -662,6 +663,7 @@
                 <span style="font-size:12px;color:#94a3b8;white-space:nowrap;margin-left:12px;">${u.published_at?new Date(u.published_at).toLocaleString('zh-CN'):''}</span>
               </div>
               <p style="font-size:13px;color:#64748b;margin:8px 0;line-height:1.5;">${escHtml((u.content||'').replace(/<[^>]+>/g,'').slice(0,150))}</p>
+              ${(()=>{const cmts=em.comments||[];const an=em.comment_analysis||{};const s=an.sentiment||{};const t=an.total_comments||cmts.length;if(!t)return '';const pp=Math.round((s.positive||0)/t*100),np=Math.round((s.negative||0)/t*100),nup=100-pp-np;const ranked=(an.details||[]).filter(d=>d.sentiment!=='neutral').concat((an.details||[]).filter(d=>d.sentiment==='neutral'));const top=ranked.slice(0,3);return `<div style="margin:8px 0;padding:10px 12px;background:#f8fafc;border-radius:10px;border:1px solid #f1f5f9;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:11px;font-weight:700;color:#475569;">评论 ${t}条</span><div style="flex:1;height:6px;display:flex;border-radius:3px;overflow:hidden;"><div style="flex:${s.positive||1};background:#22c55e;"></div><div style="flex:${s.neutral||1};background:#94a3b8;"></div><div style="flex:${s.negative||1};background:#ef4444;"></div></div><span style="font-size:10px;color:#22c55e;font-weight:600;">${pp}%</span><span style="font-size:10px;color:#ef4444;font-weight:600;">${np}%</span></div>${top.map(c=>{const badge=c.sentiment==='positive'?'<span style="font-size:9px;color:#16a34a;background:#f0fdf4;padding:1px 4px;border-radius:3px;margin-right:4px;">积极</span>':c.sentiment==='negative'?'<span style="font-size:9px;color:#ef4444;background:#fef2f2;padding:1px 4px;border-radius:3px;margin-right:4px;">负面</span>':'';return `<div style="font-size:12px;color:#64748b;line-height:1.4;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${badge}<span style="color:#1e293b;font-weight:600;">${escHtml(c.nickname||'')}：</span>${escHtml((c.content||'').slice(0,60))}</div>`;}).join('')}</div>`})()}
               <div style="display:flex;align-items:center;gap:16px;font-size:12px;color:#94a3b8;">
                 <span> </span> ${(em.liked_count||0)} <span style="margin-left:4px;"> </span> ${(em.comment_count||0)} <span style="margin-left:4px;">⭐</span> ${(em.collected_count||0)}
                 <span style="margin-left:auto;">
@@ -726,16 +728,22 @@
     renderSocialTab();
   }
 
-  // ── Price tab: 品牌发布节奏时间线 ──
+  // ── Price tab: 竞品发布节奏分析（仅小红书官方账号监听） ──
   function renderPriceTab() {
     const el = document.getElementById('priceContent');
-    if (allEntries.length === 0) {
-      el.innerHTML = '<div class="py-20 text-center"><p class="text-slate-400">暂无数据</p></div>';
+    // 仅取小红书官方账号监听数据（排除关键词搜索）
+    const xhsEntries = allEntries.filter(e => {
+      const src = e.source_url || '';
+      return src.startsWith('xhs:') && !src.includes('xhs:keyword:');
+    });
+    if (xhsEntries.length === 0) {
+      el.innerHTML = '<div class="py-20 text-center"><p class="text-slate-400">暂无小红书官方账号监听数据</p></div>';
       return;
     }
-    // 按品牌分组，每个品牌显示发布时间线
+
+    // 按品牌分组
     const brands = {};
-    allEntries.filter(e => !(e.source_url || '').includes('xhs:keyword:')).forEach(e => {
+    xhsEntries.forEach(e => {
       const raw = e.engagement_metrics?.feed_title || e.engagement_metrics?.nickname || e.engagement_metrics?.author || '';
       const name = extractBrandName(raw) || '(未知)';
       if (!brands[name]) brands[name] = [];
@@ -743,50 +751,145 @@
     });
     Object.values(brands).forEach(arr => arr.sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0)));
     const brandNames = Object.keys(brands).sort();
-    // 颜色轮
-    const colors = ['bg-indigo-500', 'bg-rose-500', 'bg-amber-500', 'bg-emerald-500', 'bg-sky-500', 'bg-purple-500', 'bg-teal-500', 'bg-orange-500'];
 
-    let html = `
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
-        <h3 class="font-semibold text-slate-900 mb-2">竞品发布节奏</h3>
-        <p class="text-sm text-slate-500 mb-6">按品牌展示最近的动态发布时间分布</p>
-        <div class="space-y-8">`;
-    brandNames.forEach((name, idx) => {
+    const now = new Date();
+    const oneWeekAgo = new Date(now - 7 * 86400000);
+    const twoWeeksAgo = new Date(now - 14 * 86400000);
+
+    // 计算每个品牌的指标
+    const brandStats = brandNames.map(name => {
       const entries = brands[name];
-      const color = colors[idx % colors.length];
-      html += `
-        <div>
-          <div class="flex items-center gap-3 mb-3">
-            <span class="w-3 h-3 rounded-full ${color}"></span>
-            <span class="font-medium text-slate-800">${escHtml(name)}</span>
-            <span class="text-xs text-slate-400">${entries.length} 条动态</span>
+      const thisWeek = entries.filter(e => new Date(e.published_at || 0) >= oneWeekAgo).length;
+      const lastWeek = entries.filter(e => {
+        const d = new Date(e.published_at || 0);
+        return d >= twoWeeksAgo && d < oneWeekAgo;
+      }).length;
+      const avgLikes = entries.reduce((s, e) => s + (e.engagement_metrics?.liked_count || 0), 0) / entries.length;
+      const latestDate = entries[0]?.published_at ? new Date(entries[0].published_at) : null;
+      const daysSinceLatest = latestDate ? Math.floor((now - latestDate) / 86400000) : 999;
+      const trend = thisWeek > lastWeek ? 'up' : thisWeek < lastWeek ? 'down' : 'flat';
+      return { name, total: entries.length, thisWeek, lastWeek, avgLikes: Math.round(avgLikes), daysSinceLatest, trend, entries };
+    });
+
+    // 按本周发布量排序
+    brandStats.sort((a, b) => b.thisWeek - a.thisWeek);
+
+    // 按周分组统计（近4周）用于折线图
+    const weekLabels = [];
+    for (let w = 3; w >= 0; w--) {
+      const weekStart = new Date(now - (w + 1) * 7 * 86400000);
+      const weekEnd = new Date(now - w * 7 * 86400000);
+      weekLabels.push({
+        label: `${weekStart.getMonth()+1}/${weekStart.getDate()}`,
+        start: weekStart,
+        end: weekEnd,
+      });
+    }
+
+    const colors = ['#6366f1', '#f43f5e', '#f59e0b', '#10b981', '#0ea5e9', '#8b5cf6', '#14b8a6', '#f97316'];
+
+    let html = '';
+
+    // 1. 品牌活跃度排名
+    html += `<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+      <h3 class="font-semibold text-slate-900 mb-1">品牌活跃度排名</h3>
+      <p class="text-sm text-slate-500 mb-5">小红书官方账号 · 近7天发布量对比上周</p>
+      <div class="space-y-4">`;
+
+    const maxThisWeek = Math.max(...brandStats.map(b => b.thisWeek), 1);
+    brandStats.forEach((b, idx) => {
+      const barWidth = (b.thisWeek / maxThisWeek) * 100;
+      const trendIcon = b.trend === 'up' ? '↑' : b.trend === 'down' ? '↓' : '→';
+      const trendColor = b.trend === 'up' ? '#22c55e' : b.trend === 'down' ? '#ef4444' : '#94a3b8';
+      const diff = b.thisWeek - b.lastWeek;
+      const diffText = diff > 0 ? `+${diff}` : diff < 0 ? `${diff}` : '持平';
+      html += `<div>
+        <div class="flex items-center justify-between mb-1">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style="background:${colors[idx % colors.length]}">${idx+1}</span>
+            <span class="font-medium text-slate-800 text-sm">${escHtml(b.name)}</span>
+            ${b.daysSinceLatest > 7 ? `<span class="text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">已${b.daysSinceLatest}天未更新</span>` : ''}
           </div>
-          <div class="flex flex-wrap gap-2 pl-6">`;
-      // 按日期分组显示
-      const byDate = {};
-      entries.forEach(e => {
-        const d = e.published_at ? new Date(e.published_at).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) : '?';
-        if (!byDate[d]) byDate[d] = 0;
-        byDate[d]++;
-      });
-      Object.entries(byDate).forEach(([date, count]) => {
-        html += `<div class="flex items-center gap-1 px-2 py-1 bg-slate-50 rounded-lg text-xs"><span class="text-slate-500">${date}</span><span class="font-semibold text-slate-700">${count}条</span></div>`;
-      });
-      html += '</div></div>';
+          <div class="flex items-center gap-3 text-xs">
+            <span class="text-slate-500">共 ${b.total} 条</span>
+            <span style="color:${trendColor};font-weight:600;">${trendIcon} ${diffText}</span>
+            <span class="font-semibold text-slate-700">本周 ${b.thisWeek} 条</span>
+          </div>
+        </div>
+        <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div class="h-full rounded-full" style="width:${barWidth}%;background:${colors[idx % colors.length]};opacity:0.8;"></div>
+        </div>
+      </div>`;
     });
     html += '</div></div>';
 
-    // 添加说明卡片
-    html += `
-      <div class="bg-indigo-50 rounded-xl border border-indigo-100 p-4">
-        <div class="flex items-start gap-3">
-          <iconify-icon icon="mdi:lightbulb-outline" class="text-indigo-500 text-lg mt-0.5"></iconify-icon>
-          <div>
-            <p class="text-sm font-medium text-indigo-900 mb-1">说明</p>
-            <p class="text-xs text-indigo-700">当前数据来源于 Follow（FOLO）订阅数据库。目前以内容发布节奏作为竞品动态监控指标。后续可接入电商平台价格 API，实现真实价格走势追踪。</p>
-          </div>
-        </div>
-      </div>`;
+    // 2. 近4周发布趋势折线图（SVG）
+    html += `<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+      <h3 class="font-semibold text-slate-900 mb-1">近4周发布趋势</h3>
+      <p class="text-sm text-slate-500 mb-5">每周发布数量变化</p>`;
+
+    // 计算每周每品牌数据
+    const chartW = 560, chartH = 200, padL = 40, padR = 10, padT = 10, padB = 30;
+    const plotW = chartW - padL - padR, plotH = chartH - padT - padB;
+    let maxVal = 1;
+    const seriesData = brandStats.slice(0, 6).map((b, bi) => {
+      const points = weekLabels.map(w => {
+        const count = b.entries.filter(e => {
+          const d = new Date(e.published_at || 0);
+          return d >= w.start && d < w.end;
+        }).length;
+        if (count > maxVal) maxVal = count;
+        return count;
+      });
+      return { name: b.name, points, color: colors[bi % colors.length] };
+    });
+
+    let svg = `<svg viewBox="0 0 ${chartW} ${chartH}" style="width:100%;max-width:${chartW}px;">`;
+    // Y轴
+    for (let i = 0; i <= 3; i++) {
+      const y = padT + plotH - (i / 3) * plotH;
+      const val = Math.round(maxVal * i / 3);
+      svg += `<line x1="${padL}" y1="${y}" x2="${chartW-padR}" y2="${y}" stroke="#f1f5f9" stroke-width="1"/>`;
+      svg += `<text x="${padL-6}" y="${y+4}" text-anchor="end" font-size="10" fill="#94a3b8">${val}</text>`;
+    }
+    // X轴
+    weekLabels.forEach((w, i) => {
+      const x = padL + (i / (weekLabels.length - 1)) * plotW;
+      svg += `<text x="${x}" y="${chartH-6}" text-anchor="middle" font-size="10" fill="#94a3b8">${w.label}</text>`;
+    });
+    // 折线
+    seriesData.forEach(s => {
+      let pathD = '';
+      s.points.forEach((v, i) => {
+        const x = padL + (i / (weekLabels.length - 1)) * plotW;
+        const y = padT + plotH - (v / maxVal) * plotH;
+        pathD += (i === 0 ? 'M' : 'L') + `${x},${y}`;
+      });
+      svg += `<path d="${pathD}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+      // 数据点
+      s.points.forEach((v, i) => {
+        const x = padL + (i / (weekLabels.length - 1)) * plotW;
+        const y = padT + plotH - (v / maxVal) * plotH;
+        svg += `<circle cx="${x}" cy="${y}" r="4" fill="${s.color}"/>`;
+        if (v > 0) svg += `<text x="${x}" y="${y-8}" text-anchor="middle" font-size="9" fill="${s.color}" font-weight="600">${v}</text>`;
+      });
+    });
+    svg += '</svg>';
+
+    // 图例
+    svg += '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;justify-content:center;">';
+    seriesData.forEach(s => {
+      svg += `<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#475569;"><span style="width:10px;height:3px;background:${s.color};border-radius:2px;display:inline-block;"></span>${escHtml(s.name)}</span>`;
+    });
+    svg += '</div>';
+
+    html += svg + '</div>';
+
+    // 3. 数据概览
+    html += `<div class="bg-slate-50 rounded-xl border border-slate-100 p-4">
+      <p class="text-xs text-slate-500">数据来源：小红书 8 个品牌官方账号监听（usmile、参半、倍至、佳洁士、高露洁、BOP、冷酸灵、舒客）· 共 ${xhsEntries.length} 条 · 每2小时自动更新</p>
+    </div>`;
+
     el.innerHTML = html;
   }
 
@@ -1174,12 +1277,24 @@
       return;
     }
 
+    // 优先从本地条目数据读取评论
+    if (!forceRefresh) {
+      const entry = allEntries.find(e => e.id === noteId);
+      const em = entry?.engagement_metrics || {};
+      if (em.comments && em.comments.length > 0) {
+        const analysis = em.comment_analysis || {};
+        _renderComments(noteId, content, em.comments, analysis);
+        return;
+      }
+    }
+
+    // 回退到 API 实时拉取
     content.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;"><div style="margin-bottom:8px;">加载评论中...</div><div style="font-size:11px;color:#cbd5e1;">评论较多时可能需要1-2分钟，请耐心等待</div></div>';
 
     try {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 180000);
-      const resp = await fetch(`/api/xhs/comments/${noteId}?sort=latest`, { signal: ctrl.signal });
+      const resp = await fetch(`/api/xhs/comments/${noteId}?sort=latest&force=${forceRefresh?1:0}`, { signal: ctrl.signal });
       clearTimeout(timer);
       if (!resp.ok) {
         let errMsg = `HTTP ${resp.status}`;
@@ -1201,82 +1316,7 @@
 
       const analysis = data.analysis || {};
       const comments = data.comments || [];
-      const sentiment = analysis.sentiment || {positive:0,negative:0,neutral:0};
-      const sellingPoints = analysis.selling_points || [];
-      const total = analysis.total_comments || 0;
-
-      let html = '';
-
-      // 情感分析摘要
-      if (total > 0) {
-        const posPct = Math.round((sentiment.positive/total)*100);
-        const negPct = Math.round((sentiment.negative/total)*100);
-        const neuPct = 100 - posPct - negPct;
-
-        html += `<div style="padding:16px;background:#f8fafc;border-radius:12px;margin-bottom:16px;">
-          <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:12px;">评论情感分析 (共 ${total} 条)</div>
-          <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <div style="flex:${sentiment.positive||1};height:8px;background:#22c55e;border-radius:4px;" title="积极 ${sentiment.positive}"></div>
-            <div style="flex:${sentiment.neutral||1};height:8px;background:#94a3b8;border-radius:4px;" title="中性 ${sentiment.neutral}"></div>
-            <div style="flex:${sentiment.negative||1};height:8px;background:#ef4444;border-radius:4px;" title="负面 ${sentiment.negative}"></div>
-          </div>
-          <div style="display:flex;gap:16px;font-size:12px;">
-            <span style="color:#22c55e;font-weight:600;">积极 ${sentiment.positive} (${posPct}%)</span>
-            <span style="color:#94a3b8;font-weight:600;">中性 ${sentiment.neutral} (${neuPct}%)</span>
-            <span style="color:#ef4444;font-weight:600;">负面 ${sentiment.negative} (${negPct}%)</span>
-          </div>
-        </div>`;
-
-        // 卖点标签
-        if (sellingPoints.length > 0) {
-          html += `<div style="padding:12px;background:#fffbeb;border-radius:12px;margin-bottom:16px;">
-            <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px;">产品卖点标签</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;">
-              ${sellingPoints.map(sp => {
-                const bg = sp.sentiment==='positive'?'#dcfce7':'#fee2e2';
-                const color = sp.sentiment==='positive'?'#166534':'#991b1b';
-                const border = sp.sentiment==='positive'?'#bbf7d0':'#fecaca';
-                return `<span style="padding:3px 10px;background:${bg};color:${color};font-size:11px;font-weight:600;border-radius:12px;border:1px solid ${border};">${escHtml(sp.tag)} (${sp.count})</span>`;
-              }).join('')}
-            </div>
-          </div>`;
-        }
-      }
-
-      // 评论列表
-      html += `<div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:8px;">评论列表</div>`;
-      if (comments.length === 0) {
-        html += '<div style="text-align:center;padding:20px;color:#94a3b8;">暂无评论</div>';
-      } else {
-        const sentimentColors = {positive:'#22c55e', negative:'#ef4444', neutral:'#94a3b8'};
-        const sentimentLabels = {positive:'积极', negative:'负面', neutral:'中性'};
-
-        for (const c of comments) {
-          const user = c.user || {};
-          const contentText = c.content || '';
-          // 找到分析详情中对应的评论
-          const detail = (analysis.details||[]).find(d => d.content === contentText) || {};
-          const s = detail.sentiment || 'neutral';
-          const points = detail.selling_points || [];
-          const isSub = c.is_sub_comment;
-
-          html += `<div style="padding:10px 12px;border-bottom:1px solid #f1f5f9;${isSub?'margin-left:24px;background:#f8fafc;border-radius:8px;':''}">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              <span style="font-size:12px;font-weight:600;color:#1e293b;">${escHtml(user.nickname||'匿名')}</span>
-              <span style="padding:1px 6px;background:${sentimentColors[s]}22;color:${sentimentColors[s]};font-size:10px;font-weight:600;border-radius:4px;">${sentimentLabels[s]}</span>
-              ${isSub?'<span style="font-size:10px;color:#94a3b8;">回复</span>':''}
-            </div>
-            <div style="font-size:13px;color:#475569;line-height:1.5;">${escHtml(contentText)}</div>
-            ${points.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">${points.map(p=>`<span style="padding:1px 6px;background:#f0fdf4;color:#15803d;font-size:10px;border-radius:4px;border:1px solid #bbf7d0;">${escHtml(p)}</span>`).join('')}</div>`:''}
-          </div>`;
-        }
-      }
-
-      // 缓存 + 刷新按钮
-      const refreshHtml = `<div style="text-align:right;margin-bottom:8px;"><button onclick="loadComments('${escHtml(noteId)}', true)" style="padding:4px 12px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:12px;">刷新评论</button></div>`;
-      const finalHtml = refreshHtml + html;
-      _commentCache[noteId] = finalHtml;
-      content.innerHTML = finalHtml;
+      _renderComments(noteId, content, comments, analysis);
     } catch (e) {
       const msg = e.name === 'AbortError' ? '请求超时(3分钟)，评论量较大请重试' : escHtml(e.message);
       content.innerHTML = `<div style="text-align:center;padding:40px;color:#ef4444;">
@@ -1284,6 +1324,91 @@
         <button onclick="loadComments('${escHtml(noteId)}')" style="padding:6px 20px;background:#7c3aed;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">重试</button>
       </div>`;
     }
+  }
+
+  function _renderComments(noteId, content, comments, analysis) {
+    const sentiment = analysis.sentiment || {positive:0,negative:0,neutral:0};
+    const sellingPoints = analysis.selling_points || [];
+    const total = analysis.total_comments || comments.length || 0;
+
+    let html = '';
+    // 情感分析摘要
+    if (total > 0) {
+      const posPct = Math.round((sentiment.positive/total)*100);
+      const negPct = Math.round((sentiment.negative/total)*100);
+      const neuPct = 100 - posPct - negPct;
+
+      html += `<div style="padding:16px;background:#f8fafc;border-radius:12px;margin-bottom:16px;">
+        <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:12px;">评论情感分析 (共 ${total} 条)</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:${sentiment.positive||1};height:8px;background:#22c55e;border-radius:4px;" title="积极 ${sentiment.positive}"></div>
+          <div style="flex:${sentiment.neutral||1};height:8px;background:#94a3b8;border-radius:4px;" title="中性 ${sentiment.neutral}"></div>
+          <div style="flex:${sentiment.negative||1};height:8px;background:#ef4444;border-radius:4px;" title="负面 ${sentiment.negative}"></div>
+        </div>
+        <div style="display:flex;gap:16px;font-size:12px;">
+          <span style="color:#22c55e;font-weight:600;">积极 ${sentiment.positive} (${posPct}%)</span>
+          <span style="color:#94a3b8;font-weight:600;">中性 ${sentiment.neutral} (${neuPct}%)</span>
+          <span style="color:#ef4444;font-weight:600;">负面 ${sentiment.negative} (${negPct}%)</span>
+        </div>
+      </div>`;
+
+      // 卖点标签
+      if (sellingPoints.length > 0) {
+        html += `<div style="padding:12px;background:#fffbeb;border-radius:12px;margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px;">产品卖点标签</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${sellingPoints.map(sp => {
+              const bg = sp.sentiment==='positive'?'#dcfce7':'#fee2e2';
+              const color = sp.sentiment==='positive'?'#166534':'#991b1b';
+              const border = sp.sentiment==='positive'?'#bbf7d0':'#fecaca';
+              return `<span style="padding:3px 10px;background:${bg};color:${color};font-size:11px;font-weight:600;border-radius:12px;border:1px solid ${border};">${escHtml(sp.tag)} (${sp.count})</span>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }
+    }
+
+    // 评论列表（有态度的排前面）
+    html += `<div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:8px;">评论列表</div>`;
+    if (comments.length === 0) {
+      html += '<div style="text-align:center;padding:20px;color:#94a3b8;">暂无评论</div>';
+    } else {
+      const sentimentColors = {positive:'#22c55e', negative:'#ef4444', neutral:'#94a3b8'};
+      const sentimentLabels = {positive:'积极', negative:'负面', neutral:'中性'};
+      const detailsMap = {};
+      (analysis.details||[]).forEach(d => { detailsMap[d.content] = d; });
+      const sorted = [...comments].sort((a, b) => {
+        const sa = (detailsMap[a.content||'']||{}).sentiment || 'neutral';
+        const sb = (detailsMap[b.content||'']||{}).sentiment || 'neutral';
+        const w = {negative:0, positive:1, neutral:2};
+        return (w[sa]||2) - (w[sb]||2);
+      });
+
+      for (const c of sorted) {
+        const user = c.user || {};
+        const contentText = c.content || '';
+        const detail = detailsMap[contentText] || {};
+        const s = detail.sentiment || 'neutral';
+        const points = detail.selling_points || [];
+        const isSub = c.is_sub_comment;
+
+        html += `<div style="padding:10px 12px;border-bottom:1px solid #f1f5f9;${isSub?'margin-left:24px;background:#f8fafc;border-radius:8px;':''}">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="font-size:12px;font-weight:600;color:#1e293b;">${escHtml(user.nickname||'匿名')}</span>
+            <span style="padding:1px 6px;background:${sentimentColors[s]}22;color:${sentimentColors[s]};font-size:10px;font-weight:600;border-radius:4px;">${sentimentLabels[s]}</span>
+            ${isSub?'<span style="font-size:10px;color:#94a3b8;">回复</span>':''}
+          </div>
+          <div style="font-size:13px;color:#475569;line-height:1.5;">${escHtml(contentText)}</div>
+          ${points.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">${points.map(p=>`<span style="padding:1px 6px;background:#f0fdf4;color:#15803d;font-size:10px;border-radius:4px;border:1px solid #bbf7d0;">${escHtml(p)}</span>`).join('')}</div>`:''}
+        </div>`;
+      }
+    }
+
+    // 缓存 + 刷新按钮
+    const refreshHtml = `<div style="text-align:right;margin-bottom:8px;"><button onclick="loadComments('${escHtml(noteId)}', true)" style="padding:4px 12px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:12px;">刷新评论</button></div>`;
+    const finalHtml = refreshHtml + html;
+    _commentCache[noteId] = finalHtml;
+    content.innerHTML = finalHtml;
   }
 
   function closeComments() {

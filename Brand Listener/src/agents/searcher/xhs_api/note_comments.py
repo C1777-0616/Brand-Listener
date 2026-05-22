@@ -212,12 +212,17 @@ class XHSNoteComments:
             result = self.get_comments(note_id, last_cursor, sort)
             
             if not result.get("success"):
-                return {
-                    "success": False,
-                    "error_code": result.get("error_code"),
-                    "message": f"第 {page} 页获取失败：{result.get('message')}",
-                    "data": {"comments": all_comments, "total_pages": page - 1}
-                }
+                # 第 1 页失败才报错；后续页失败返回已有结果
+                if page == 1:
+                    return {
+                        "success": False,
+                        "error_code": result.get("error_code"),
+                        "message": f"第 {page} 页获取失败：{result.get('message')}",
+                        "data": {"comments": all_comments, "total_pages": page - 1}
+                    }
+                else:
+                    print(f"[WARN] 第 {page} 页获取失败，返回已有 {len(all_comments)} 条评论")
+                    break
             
             data = result.get("data", {})
             comments = data.get("comments", [])
@@ -384,7 +389,8 @@ class XHSNoteComments:
             400: "参数错误",
             500: "内部服务器错误",
             600: "权限不足",
-            601: "余额不足"
+            601: "余额不足",
+            6002: "评论接口异常，请稍后重试"
         }
         return error_messages.get(code, f"未知错误 (code: {code})")
     

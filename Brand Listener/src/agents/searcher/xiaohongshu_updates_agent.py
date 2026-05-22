@@ -557,7 +557,7 @@ class XiaohongshuUpdatesAgent:
                             keyword=keyword,
                             page=page,
                             sort=sort_param,
-                            note_time="半年内",
+                            note_time="一天内",
                         )
 
                         if not result.get("success"):

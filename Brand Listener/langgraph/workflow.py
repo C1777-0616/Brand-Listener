@@ -125,23 +125,10 @@ def create_full_workflow(use_mock: bool = True) -> StateGraph:
     # ── Searcher group edges (sequential) ──
     workflow.add_edge("official_updates_agent", "content_classification_agent")
     workflow.add_edge("content_classification_agent", "content_tagging_agent")
-    workflow.add_edge("content_tagging_agent", "ocr_agent")
-    workflow.add_edge("ocr_agent", "brand_culture_agent")
-    workflow.add_edge("brand_culture_agent", "social_media_feedback_agent")
-    workflow.add_edge("social_media_feedback_agent", "shopping_platform_feedback_agent")
 
-    # ── Analyst group edges ──
-    workflow.add_edge("shopping_platform_feedback_agent", "campaign_analyst_agent")
-    workflow.add_edge("campaign_analyst_agent", "feedback_analyst_agent")
-
-    # ── Reporter edge ──
-    workflow.add_edge("feedback_analyst_agent", "report_agent")
-
-    # ── Supervisor edge ──
-    workflow.add_edge("report_agent", "dispatcher_agent")
-
-    # End
-    workflow.add_edge("dispatcher_agent", END)
+    # 跳过 OCR / mock agent / analyst / reporter / dispatcher
+    # 只跑：官方更新(FOLO+小红书博主) → 分类 → 打标
+    workflow.add_edge("content_tagging_agent", END)
 
     return workflow.compile()
 

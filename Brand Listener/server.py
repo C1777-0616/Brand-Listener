@@ -377,19 +377,28 @@ def _run_pipeline_background(force: bool = False):
         new_updates = [u for u in new_updates if _is_oral_related(u)]
         added = 0
         updated = 0
+        new_entries = []  # 仅本次新增的条目（用于拉取评论）
         for u in new_updates:
             key = f"{u.get('source_url', '')}:{u.get('id', '')}"
             if key and key not in entries_store:
                 entries_store[key] = u
+                new_entries.append(u)
                 added += 1
             elif key:
-                old_tags = (entries_store[key].get("engagement_metrics") or {}).get("ai_tags")
-                new_tags = (u.get("engagement_metrics") or {}).get("ai_tags")
-                if new_tags and not old_tags:
-                    entries_store[key] = u
-                    updated += 1
+                # 始终保留已有评论数据（避免重复 API 调用）
+                old_em = entries_store[key].get("engagement_metrics") or {}
+                new_em = u.get("engagement_metrics") or {}
+                if old_em.get("comments"):
+                    new_em["comments"] = old_em["comments"]
+                if old_em.get("comment_analysis"):
+                    new_em["comment_analysis"] = old_em["comment_analysis"]
+                # 保留已有 ai_tags（如果新数据没有）
+                if old_em.get("ai_tags") and not new_em.get("ai_tags"):
+                    new_em["ai_tags"] = old_em["ai_tags"]
+                u["engagement_metrics"] = new_em
+                entries_store[key] = u
+                updated += 1
         logger.info(f"entries_store: +{added} new, +{updated} updated, total {len(entries_store)}")
-        logger.info(f"entries_store: +{added} new, total {len(entries_store)}")
         try:
             with open(_STORE_PATH, "w", encoding="utf-8") as f:
                 json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
@@ -398,11 +407,87 @@ def _run_pipeline_background(force: bool = False):
         _retag_missing()
         _purge_clinic_ads()
         _dedup_entries_store()
+        # 只对新增条目拉取评论（避免重复调用浪费 API Token）
+        token = _read_xhs_api_token()
+        if token and new_entries:
+            _fetch_and_store_comments(new_entries, token)
         logger.info("Background pipeline finished")
     except Exception as e:
         logger.error(f"Background pipeline failed: {e}", exc_info=True)
     finally:
         pipeline_running = False
+
+
+_XHS_SEARCH_KEYWORDS = ["牙膏", "牙刷", "电动牙刷", "口腔健康", "牙齿美白"]
+_xhs_search_running = False
+
+
+def _run_xhs_search_background():
+    """定时自动搜索小红书关键词。"""
+    global _xhs_search_running
+    if _xhs_search_running:
+        logger.info("XHS search already running, skipping")
+        return
+    _xhs_search_running = True
+    try:
+        token = _read_xhs_api_token()
+        if not token:
+            logger.warning("XHS_API_TOKEN not configured, skipping auto search")
+            return
+
+        from src.agents.searcher.xiaohongshu_updates_agent import XiaohongshuUpdatesAgent
+        agent = XiaohongshuUpdatesAgent({
+            "xhs_api_token": token,
+            "xhs_monitor_targets": [],
+            "lookback_hours": 720,
+        })
+
+        # 加载已有去重集
+        for k in entries_store:
+            note_id = k.rsplit(":", 1)[-1]
+            agent.processed_updates.add(note_id)
+
+        logger.info(f"Auto XHS search started: {_XHS_SEARCH_KEYWORDS}")
+        updates = agent.search_by_keywords(_XHS_SEARCH_KEYWORDS, 20)
+
+        # 评分
+        agent.apply_scores(updates)
+
+        # 过滤
+        updates = [u for u in updates if not ((u.engagement_metrics or {}).get("ai_tags") == ["教程科普"])]
+        updates_dict = [u.model_dump() if hasattr(u, 'model_dump') else vars(u) for u in updates]
+        updates = [u for u, d in zip(updates, updates_dict)
+                   if _is_oral_related(d) and not _is_clinic_ad(d)]
+
+        # 增量合并
+        total_saved = 0
+        new_entries = []
+        for u in updates:
+            key = f"{u.source_url}:{u.id}"
+            if key not in entries_store:
+                entry_dict = u.model_dump() if hasattr(u, 'model_dump') else vars(u)
+                entries_store[key] = entry_dict
+                new_entries.append(entry_dict)
+                total_saved += 1
+
+        logger.info(f"Auto XHS search done: saved {total_saved} new entries, total {len(entries_store)}")
+
+        # 持久化
+        if total_saved > 0:
+            try:
+                with open(_STORE_PATH, "w", encoding="utf-8") as f:
+                    json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+            except Exception as e:
+                logger.warning(f"Could not save entries_store after auto search: {e}")
+            _retag_missing()
+
+        # 只对新增条目拉取评论（避免重复调用浪费 API Token）
+        if new_entries:
+            _fetch_and_store_comments(new_entries, token)
+    except Exception as e:
+        logger.error(f"Auto XHS search failed: {e}", exc_info=True)
+    finally:
+        _xhs_search_running = False
 
 
 @app.on_event("startup")
@@ -415,9 +500,10 @@ async def _startup():
     if not _HAS_APSCHEDULER:
         return
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(_run_pipeline_background, "interval", minutes=15, id="auto_pipeline", next_run_time=None)
+    scheduler.add_job(_run_pipeline_background, "interval", minutes=360, id="auto_pipeline", next_run_time=None)
+    scheduler.add_job(_run_xhs_search_background, "interval", minutes=1440, id="auto_xhs_search", next_run_time=None)
     scheduler.start()
-    logger.info("APScheduler started — pipeline will auto-run every 15 minutes")
+    logger.info("APScheduler started — pipeline + XHS search will auto-run every 6 hours")
 
 # ── State ──
 
@@ -644,6 +730,20 @@ async def pipeline_status():
     }
 
 
+_SURROGATE_RE = re.compile(r"[\ud800-\udfff]")
+
+
+def _sanitize(obj):
+    """递归清理字符串中的非法 surrogate 字符（导致 JSON 序列化失败）。"""
+    if isinstance(obj, str):
+        return _SURROGATE_RE.sub("", obj)
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    return obj
+
+
 @app.get("/api/data/latest")
 async def get_latest_data():
     """Return all accumulated entries from entries_store."""
@@ -653,7 +753,10 @@ async def get_latest_data():
             "message": "No pipeline run yet. POST /api/pipeline/run to execute.",
             "data": {},
         }
-    updates = list(entries_store.values())
+    updates = []
+    for v in entries_store.values():
+        entry = {k: val for k, val in v.items() if k != "raw_data"}
+        updates.append(_sanitize(entry))
     return {
         "has_data": True,
         "timestamp": datetime.now().isoformat(),
@@ -847,83 +950,6 @@ def _read_xhs_api_token() -> str:
     return ""
 
 
-@app.post("/api/xhs/search")
-async def xhs_keyword_search(request: Request, background_tasks: BackgroundTasks):
-    """按关键词搜索小红书笔记，自动评分、去重、入库。"""
-    body = await request.json()
-    keywords = body.get("keywords", [])
-    num_per_keyword = body.get("num", 20)
-
-    if not keywords:
-        raise HTTPException(status_code=400, detail="keywords 不能为空")
-
-    token = _read_xhs_api_token()
-    if not token:
-        raise HTTPException(status_code=500, detail="XHS_API_TOKEN 未配置")
-
-    from src.agents.searcher.xiaohongshu_updates_agent import XiaohongshuUpdatesAgent
-    agent = XiaohongshuUpdatesAgent({
-        "xhs_api_token": token,
-        "xhs_monitor_targets": [],
-        "lookback_hours": 720,
-    })
-
-    # 加载已有去重集（提取 note_id 部分）
-    for k in entries_store:
-        note_id = k.rsplit(":", 1)[-1]
-        agent.processed_updates.add(note_id)
-
-    try:
-        updates = agent.search_by_keywords(keywords, num_per_keyword)
-    except Exception as e:
-        logger.error(f"XHS search failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-    # 评分
-    agent.apply_scores(updates)
-
-    # 过滤：自动剔除只有"教程科普"标签的帖子（纯知识搬运，无商业价值）
-    updates = [u for u in updates if not ((u.engagement_metrics or {}).get("ai_tags") == ["教程科普"])]
-    # 过滤：剔除与口腔护理行业无关的数据 + 口腔医院/诊所广告
-    updates_dict = [u.model_dump() if hasattr(u, 'model_dump') else vars(u) for u in updates]
-    updates = [u for u, d in zip(updates, updates_dict)
-               if _is_oral_related(d) and not _is_clinic_ad(d)]
-
-    # 增量合并入 entries_store
-    results = []
-    for kw in keywords:
-        kw_entries = [u for u in updates if u.source_url == f"xhs:keyword:{kw}"]
-        saved = 0
-        for u in kw_entries:
-            key = f"{u.source_url}:{u.id}"
-            if key not in entries_store:
-                entries_store[key] = u.model_dump() if hasattr(u, 'model_dump') else vars(u)
-                saved += 1
-        results.append({
-            "keyword": kw,
-            "found": len(kw_entries),
-            "saved": saved,
-        })
-
-    total_saved = sum(r["saved"] for r in results)
-
-    # 持久化
-    if total_saved > 0:
-        try:
-            with open(_STORE_PATH, "w", encoding="utf-8") as f:
-                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
-        except Exception as e:
-            logger.warning(f"Could not save entries_store after search: {e}")
-        background_tasks.add_task(_retag_missing)
-        background_tasks.add_task(_ocr_missing)
-
-    return {
-        "success": True,
-        "results": results,
-        "total_saved": total_saved,
-    }
-
-
 @app.get("/api/xhs/analysis")
 async def xhs_analysis(days: int = 30):
     """分析关键词搜索结果的价值分布和宣发效果。"""
@@ -1020,9 +1046,114 @@ async def xhs_analysis(days: int = 30):
     }
 
 
+def _fetch_and_store_comments(entries: list, token: str):
+    """批量拉取评论并存入 entries_store（同步函数，应在后台线程执行）。
+
+    省钱策略：
+    - 仅拉取近30天帖子（旧帖子评论不再变化）
+    - 跳过低互动帖子（点赞<10）
+    - 每篇最多2页（20条评论，覆盖90%场景）
+    - 每次运行最多处理50条
+    - 已有评论的帖子跳过
+    """
+    from src.agents.searcher.xhs_api.note_comments import XHSNoteComments
+    from src.agents.searcher.comment_analyzer import analyze_comments
+
+    crawler = XHSNoteComments(token)
+    fetched = 0
+    max_per_run = 50
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+
+    for entry in entries:
+        if fetched >= max_per_run:
+            logger.info(f"Comment fetch: hit max_per_run={max_per_run}, stopping")
+            break
+
+        note_id = entry.get("id", "")
+        src = entry.get("source_url", "") or ""
+        # 处理所有小红书数据（包括关键词搜索）
+        if not src.startswith("xhs:"):
+            continue
+        em = entry.get("engagement_metrics") or {}
+        # 已有评论数据则跳过
+        if em.get("comments") or em.get("comment_analysis"):
+            continue
+        # 跳过低互动帖子（点赞<10）
+        likes = em.get("liked_count") or em.get("likes") or 0
+        if likes < 10:
+            # 标记为已处理（空评论），避免下次再检查
+            em["comment_analysis"] = {"total_comments": 0, "sentiment": {"positive": 0, "negative": 0, "neutral": 0}, "selling_points": []}
+            entry["engagement_metrics"] = em
+            key = f"{src}:{note_id}"
+            if key in entries_store:
+                entries_store[key] = entry
+            continue
+        # 跳过30天前的帖子
+        pub = entry.get("published_at")
+        if pub:
+            try:
+                pub_date = datetime.fromisoformat(pub.replace("Z", "+00:00")).replace(tzinfo=None)
+                if pub_date < thirty_days_ago:
+                    em["comment_analysis"] = {"total_comments": 0, "sentiment": {"positive": 0, "negative": 0, "neutral": 0}, "selling_points": []}
+                    entry["engagement_metrics"] = em
+                    key = f"{src}:{note_id}"
+                    if key in entries_store:
+                        entries_store[key] = entry
+                    continue
+            except (ValueError, TypeError):
+                pass
+        try:
+            result = crawler.get_all_comments(
+                note_id=note_id,
+                sort="latest",
+                fetch_sub_comments=False,
+                delay_seconds=0.2,
+                sub_comment_delay=0.1,
+                max_pages=1,
+            )
+            if result and result.get("success"):
+                comments = result.get("data", {}).get("comments", [])
+                analysis = analyze_comments(comments)
+                em["comments"] = comments
+                em["comment_analysis"] = analysis
+                entry["engagement_metrics"] = em
+                # 更新 entries_store
+                key = f"{src}:{note_id}"
+                if key in entries_store:
+                    entries_store[key] = entry
+                fetched += 1
+        except Exception as e:
+            logger.warning(f"Comment fetch failed for {note_id}: {e}")
+
+    if fetched > 0:
+        logger.info(f"Fetched comments for {fetched} entries")
+        try:
+            with open(_STORE_PATH, "w", encoding="utf-8") as f:
+                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+        except Exception as e:
+            logger.warning(f"Could not save entries_store after comment fetch: {e}")
+
+
 @app.get("/api/xhs/comments/{note_id}")
-async def get_note_comments(note_id: str, sort: str = "latest"):
-    """获取小红书笔记评论（含情感分析 + 卖点标签）。"""
+async def get_note_comments(note_id: str, sort: str = "latest", force: int = 0):
+    """获取小红书笔记评论（含情感分析 + 卖点标签）。优先从本地缓存读取。"""
+    # 优先从 entries_store 读取已缓存的评论
+    if not force:
+        for entry in entries_store.values():
+            if entry.get("id") == note_id:
+                em = entry.get("engagement_metrics") or {}
+                cached_comments = em.get("comments")
+                cached_analysis = em.get("comment_analysis")
+                if cached_comments is not None:
+                    return {
+                        "success": True,
+                        "note_id": note_id,
+                        "comments": cached_comments,
+                        "total_comments": len(cached_comments),
+                        "analysis": cached_analysis or {},
+                        "cached": True,
+                    }
+
     token = _read_xhs_api_token()
     if not token:
         raise HTTPException(status_code=500, detail="XHS_API_TOKEN 未配置")
@@ -1039,10 +1170,10 @@ async def get_note_comments(note_id: str, sort: str = "latest"):
             crawler.get_all_comments,
             note_id=note_id,
             sort=sort,
-            fetch_sub_comments=True,
+            fetch_sub_comments=False,
             delay_seconds=0.2,
             sub_comment_delay=0.1,
-            max_pages=20,
+            max_pages=5,
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"获取评论失败: {e}")
@@ -1055,6 +1186,20 @@ async def get_note_comments(note_id: str, sort: str = "latest"):
 
     # 情感分析 + 卖点提取
     analysis = analyze_comments(all_comments)
+
+    # 缓存到 entries_store，下次直接读
+    for entry in entries_store.values():
+        if entry.get("id") == note_id:
+            em = entry.get("engagement_metrics") or {}
+            em["comments"] = all_comments
+            em["comment_analysis"] = analysis
+            entry["engagement_metrics"] = em
+            try:
+                with open(_STORE_PATH, "w", encoding="utf-8") as f:
+                    json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+            except Exception:
+                pass
+            break
 
     return {
         "success": True,

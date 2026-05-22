@@ -1,33 +1,41 @@
 """
 CommentAnalyzer — 小红书评论情感分析 + 卖点提取模块。
 
-基于关键词规则对评论进行情感分类（积极/负面/中性），
+使用 BettaFish 多语言情感分析模型（DistilBERT）对评论进行情感分类，
 并从评论中提取具体的产品卖点标签。
 """
+import os
+import sys
 import re
 from typing import Dict, Any, List
 from collections import Counter
 
+# 直接导入 BettaFish sentiment_analyzer 模块（避免触发 InsightEngine.__init__ 加载无关依赖）
+_bf_sa_path = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "BettaFish", "InsightEngine", "tools"))
+if _bf_sa_path not in sys.path:
+    sys.path.insert(0, _bf_sa_path)
 
-# ── 情感关键词 ──
+import sentiment_analyzer as _bf_sa
+analyze_sentiment = _bf_sa.analyze_sentiment
+SentimentResult = _bf_sa.SentimentResult
 
-_POSITIVE_KEYWORDS = [
-    "好用", "推荐", "回购", "舒服", "好刷", "满意", "效果好", "性价比高",
-    "值得", "好闻", "泡沫丰富", "好", "不错", "喜欢", "种草", "安利",
-    "爱了", "真香", "绝了", "yyds", "惊艳", "惊喜", "超值", "划算",
-    "好看", "颜值高", "质量好", "手感好", "温和", "干净",
-    "有效", "改善", "持久", "耐用", "方便", "清新", "白了",
-    "亮了", "柔软", "细腻", "专业", "高级", "不刺激", "不伤",
-]
+# 5级 → 3级 映射
+_LABEL_MAP = {
+    "非常负面": "negative",
+    "负面": "negative",
+    "中性": "neutral",
+    "正面": "positive",
+    "非常正面": "positive",
+}
 
-_NEGATIVE_KEYWORDS = [
-    "不好用", "踩雷", "难用", "失望", "过敏", "刺激", "味道难闻",
-    "太贵", "掉毛", "不值", "差", "差评", "垃圾", "退货", "退款",
-    "假货", "劣质", "质量差", "不推荐", "浪费", "坑", "后悔",
-    "上当", "骗人", "鸡肋", "没用", "没效果", "一般般", "普通",
-    "贵", "不划算", "噪音大", "漏水", "坏", "断", "裂", "臭",
-    "难闻", "牙龈出血", "出血", "疼", "痛", "过敏", "发炎",
-]
+
+def _classify_sentiment(text: str) -> str:
+    """调用 BettaFish 模型对单条评论进行情感分类，返回 positive/negative/neutral。"""
+    result = analyze_sentiment(text)
+    if isinstance(result, SentimentResult) and result.success:
+        return _LABEL_MAP.get(result.sentiment_label, "neutral")
+    return "neutral"
+
 
 # ── 卖点标签及关键词 ──
 
@@ -92,36 +100,10 @@ _SELLING_POINTS = {
 }
 
 
-def _is_negated(text: str, keyword: str) -> bool:
-    """检查关键词在文本中是否被否定词（不/没/别）修饰。"""
-    idx = text.find(keyword)
-    while idx != -1:
-        if idx > 0 and text[idx - 1] in ("不", "没", "别"):
-            return True
-        idx = text.find(keyword, idx + 1)
-    return False
-
-
-def _classify_sentiment(text: str) -> str:
-    """对单条评论进行情感分类。负面关键词优先，但被否定的负面词除外（如"不刺激"≠负面）。"""
-    # 负面词：命中且未被否定 → 负面
-    for kw in _NEGATIVE_KEYWORDS:
-        if kw in text and not _is_negated(text, kw):
-            return "negative"
-
-    # 正面词：命中 → 正面
-    for kw in _POSITIVE_KEYWORDS:
-        if kw in text:
-            return "positive"
-
-    return "neutral"
-
-
 def _extract_selling_points(text: str, sentiment: str) -> List[str]:
     """从评论中提取卖点标签。"""
     found = []
     for tag, info in _SELLING_POINTS.items():
-        # 只提取与评论情感一致的卖点
         if info["sentiment"] != sentiment:
             continue
         for kw in info["keywords"]:
@@ -162,20 +144,46 @@ def analyze_comments(comments: List[Dict[str, Any]]) -> Dict[str, Any]:
             "details": [],
         }
 
+    # 批量提取文本
+    texts = []
+    valid_comments = []
+    for comment in comments:
+        content = comment.get("content", "") or ""
+        if content.strip():
+            texts.append(content)
+            valid_comments.append(comment)
+
+    if not texts:
+        return {
+            "total_comments": 0,
+            "sentiment": {"positive": 0, "negative": 0, "neutral": 0},
+            "positive_ratio": 0.0,
+            "selling_points": [],
+            "details": [],
+        }
+
+    # 批量情感分析
+    batch_result = analyze_sentiment(texts)
+
     sentiment_counts = Counter()
     selling_point_counts = Counter()
     details = []
 
-    for comment in comments:
-        content = comment.get("content", "") or ""
-        if not content.strip():
-            continue
+    for i, comment in enumerate(valid_comments):
+        content = texts[i]
 
-        # 情感分类
-        sentiment = _classify_sentiment(content)
+        # 从批量结果获取情感
+        if hasattr(batch_result, "results") and i < len(batch_result.results):
+            r = batch_result.results[i]
+            if r.success:
+                sentiment = _LABEL_MAP.get(r.sentiment_label, "neutral")
+            else:
+                sentiment = "neutral"
+        else:
+            sentiment = "neutral"
+
         sentiment_counts[sentiment] += 1
 
-        # 卖点提取
         points = _extract_selling_points(content, sentiment)
         for point in points:
             selling_point_counts[point] += 1
@@ -190,14 +198,13 @@ def analyze_comments(comments: List[Dict[str, Any]]) -> Dict[str, Any]:
     total = len(details)
     pos_count = sentiment_counts.get("positive", 0)
 
-    # 卖点汇总
     selling_points = []
     for tag, count in selling_point_counts.most_common():
-        sentiment = _SELLING_POINTS.get(tag, {}).get("sentiment", "positive")
+        sp_sentiment = _SELLING_POINTS.get(tag, {}).get("sentiment", "positive")
         selling_points.append({
             "tag": tag,
             "count": count,
-            "sentiment": sentiment,
+            "sentiment": sp_sentiment,
         })
 
     return {
