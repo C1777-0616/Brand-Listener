@@ -113,7 +113,7 @@
         grid: { left: 40, right: 20, bottom: 30, top: 40 },
         xAxis: { type: 'category', data: epd.map(d => d.date.slice(5)), axisLabel: { fontSize: 11 } },
         yAxis: { type: 'value', minInterval: 1 },
-        series: [{
+        series: series.length ? series : [{
           name: '发文量', type: 'bar', stack: 'total',
           itemStyle: { color: '#6366F1' },
           data: epd.map(d => d.count),
@@ -185,13 +185,6 @@
         const btn = document.getElementById('runBtn'); btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> 运行中...';
         try { await runPipeline(); loadDashboard(currentDays); btn.innerHTML = '<iconify-icon icon="mdi:check-circle"></iconify-icon> 完成'; setTimeout(() => { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:play-circle"></iconify-icon> 运行流水线'; }, 1500); }
         catch { btn.innerHTML = '失败'; btn.disabled = false; }
-      });
-
-      // Upload
-      document.getElementById('uploadBtn').addEventListener('click', async () => {
-        const input = document.getElementById('fileInput');
-        if (!input.files[0]) return;
-        try { await uploadExport(input.files[0]); alert('上传成功'); input.value = ''; } catch(e) { alert('上传失败: '+e.message); }
       });
 
       // Resize charts on window resize

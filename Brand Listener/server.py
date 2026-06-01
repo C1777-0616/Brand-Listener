@@ -7,6 +7,7 @@ Serves frontend static files and exposes endpoints to trigger/manage the pipelin
 import sys
 import json
 import re
+import os
 import logging
 import time as _time
 from pathlib import Path
@@ -21,6 +22,7 @@ sys.path.insert(0, str(_root))
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 try:
@@ -31,6 +33,12 @@ except ImportError:
     logging.getLogger("server").warning(
         "apscheduler not installed — auto-refresh disabled. Run: pip install apscheduler"
     )
+
+try:
+    from watchfiles import watch as _watch_files
+    _HAS_WATCHFILES = True
+except ImportError:
+    _HAS_WATCHFILES = False
 
 from src.utils.config import get_api_config
 from src.brand_config import get_brand_config_manager, BrandConfig
@@ -51,7 +59,7 @@ _ORAL_KEYWORDS = [
 # 永久黑名单：与口腔护理无关的 FOLO 订阅来源
 _BLOCKED_SOURCES = [
     "1x.com", "macrumors.com", "github.blog", "vox.com", "smzdm.com",
-    "theverge.com", "tophub.today", "apod.nasa.gov",
+    "theverge.com", "tophub.today", "apod.nasa.gov", "nature.com",
     "x.com/elonmusk", "x.com/GeminiApp", "x.com/sama",
     "x.com/AnthropicAI", "x.com/OpenAI",
     "t.me/s/durov",
@@ -109,6 +117,27 @@ def _is_oral_related(entry: dict) -> bool:
 
 app = FastAPI(title="Brand Listener API", version="0.1.0")
 
+# ── CORS ──
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8000",
+        "http://localhost:8001",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:8001",
+        "http://192.168.103.186:8000",
+        "http://192.168.103.186:8001",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── Concurrency locks ──
+import threading
+_store_lock = threading.Lock()
+_pipeline_lock = threading.Lock()
+
 # ── Background pipeline runner ──
 
 def _retag_missing():
@@ -131,8 +160,8 @@ def _retag_missing():
 
     if changed:
         try:
-            with open(_STORE_PATH, "w", encoding="utf-8") as f:
-                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+            with _store_lock:
+                _save_store_atomically()
         except Exception as e:
             logger.warning(f"Could not save entries_store after retag: {e}")
 
@@ -186,8 +215,8 @@ def _ocr_missing():
                 logger.info(f"OCR progress: {processed}/{len(entries_to_process)} entries processed")
                 # 中间持久化
                 try:
-                    with open(_STORE_PATH, "w", encoding="utf-8") as f:
-                        json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+                    with _store_lock:
+                        _save_store_atomically()
                 except Exception:
                     pass
         except Exception as e:
@@ -196,8 +225,8 @@ def _ocr_missing():
 
     # 持久化
     try:
-        with open(_STORE_PATH, "w", encoding="utf-8") as f:
-            json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+        with _store_lock:
+            _save_store_atomically()
     except Exception as e:
         logger.warning(f"Could not save entries_store after OCR: {e}")
 
@@ -211,8 +240,8 @@ def _purge_clinic_ads():
     if to_remove:
         logger.info(f"Purged {len(to_remove)} clinic ads from xhs:keyword entries")
         try:
-            with open(_STORE_PATH, "w", encoding="utf-8") as f:
-                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+            with _store_lock:
+                _save_store_atomically()
         except Exception as e:
             logger.warning(f"Could not save entries_store after purge: {e}")
 
@@ -239,8 +268,8 @@ def _dedup_entries_store():
     if to_remove:
         logger.info(f"Dedup: removed {len(to_remove)} duplicate entries by note_id")
         try:
-            with open(_STORE_PATH, "w", encoding="utf-8") as f:
-                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+            with _store_lock:
+                _save_store_atomically()
         except Exception as e:
             logger.warning(f"Could not save entries_store after dedup: {e}")
 
@@ -323,8 +352,8 @@ def _fix_xhs_timestamps() -> Dict[str, Any]:
     # 持久化
     if fixed > 0:
         try:
-            with open(_STORE_PATH, "w", encoding="utf-8") as f:
-                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+            with _store_lock:
+                _save_store_atomically()
         except Exception as e:
             logger.warning(f"Could not save entries_store after timestamp fix: {e}")
 
@@ -339,14 +368,12 @@ def _run_pipeline_background(force: bool = False):
     """
     global latest_result, pipeline_running, last_run_at, _folo_db_last_mtime
 
-    if pipeline_running:
-        logger.info("Pipeline already running, skipping scheduled run")
-        return
+    with _pipeline_lock:
+        if pipeline_running:
+            logger.info("Pipeline already running, skipping scheduled run")
+            return
+        pipeline_running = True
 
-    # 不再因 FOLO .db 未变而跳过整条 pipeline（XHS 等数据源需要始终运行）
-    # exporter 层面可通过 entries_store 做去重
-
-    pipeline_running = True
     try:
         # Check if FOLO db exists directly at its fixed path
         folo_has_data = _fo_has_db() or any(exports_dir.glob("*.db")) or any(exports_dir.glob("*.json")) or any(exports_dir.glob("*.csv"))
@@ -400,8 +427,8 @@ def _run_pipeline_background(force: bool = False):
                 updated += 1
         logger.info(f"entries_store: +{added} new, +{updated} updated, total {len(entries_store)}")
         try:
-            with open(_STORE_PATH, "w", encoding="utf-8") as f:
-                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+            with _store_lock:
+                _save_store_atomically()
         except Exception as e:
             logger.warning(f"Could not save entries_store: {e}")
         _retag_missing()
@@ -415,7 +442,8 @@ def _run_pipeline_background(force: bool = False):
     except Exception as e:
         logger.error(f"Background pipeline failed: {e}", exc_info=True)
     finally:
-        pipeline_running = False
+        with _pipeline_lock:
+            pipeline_running = False
 
 
 _XHS_SEARCH_KEYWORDS = ["牙膏", "牙刷", "电动牙刷", "口腔健康", "牙齿美白"]
@@ -435,10 +463,17 @@ def _run_xhs_search_background():
             logger.warning("XHS_API_TOKEN not configured, skipping auto search")
             return
 
+        import os
+        _monitor_targets_raw = os.environ.get("XHS_MONITOR_TARGETS", "[]")
+        try:
+            _monitor_targets = json.loads(_monitor_targets_raw)
+        except json.JSONDecodeError:
+            _monitor_targets = []
+
         from src.agents.searcher.xiaohongshu_updates_agent import XiaohongshuUpdatesAgent
         agent = XiaohongshuUpdatesAgent({
             "xhs_api_token": token,
-            "xhs_monitor_targets": [],
+            "xhs_monitor_targets": _monitor_targets,
             "lookback_hours": 720,
         })
 
@@ -475,8 +510,8 @@ def _run_xhs_search_background():
         # 持久化
         if total_saved > 0:
             try:
-                with open(_STORE_PATH, "w", encoding="utf-8") as f:
-                    json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+                with _store_lock:
+                    _save_store_atomically()
             except Exception as e:
                 logger.warning(f"Could not save entries_store after auto search: {e}")
             _retag_missing()
@@ -490,6 +525,31 @@ def _run_xhs_search_background():
         _xhs_search_running = False
 
 
+def _watch_folo_files():
+    """监听 FOLO 目录下 .db 文件变化，文件修改后自动触发 pipeline。"""
+    if not FOLO_DIR.exists():
+        logger.warning(f"FOLO directory not found: {FOLO_DIR}, file watcher disabled")
+        return
+
+    def _loop():
+        global _folo_db_last_mtime
+        _folo_db_last_mtime = _fo_latest_mtime()
+        logger.info(f"FOLO file watcher started — monitoring {FOLO_DIR} (*.db)")
+        for changes in _watch_files(FOLO_DIR, watch_filter=lambda change, path: path.endswith(".db")):
+            new_mtime = _fo_latest_mtime()
+            if new_mtime <= _folo_db_last_mtime:
+                continue  # mtime 没变，跳过
+            logger.info(f"FOLO .db file changed (mtime {_folo_db_last_mtime} → {new_mtime}), triggering pipeline")
+            _folo_db_last_mtime = new_mtime
+            if not pipeline_running:
+                _run_pipeline_background(force=True)
+            else:
+                logger.info("Pipeline already running, FOLO change will be picked up next run")
+
+    t = threading.Thread(target=_loop, daemon=True, name="folo-watcher")
+    t.start()
+
+
 @app.on_event("startup")
 async def _startup():
     import asyncio
@@ -497,6 +557,8 @@ async def _startup():
     loop.run_in_executor(None, _retag_missing)
     loop.run_in_executor(None, _purge_clinic_ads)
     loop.run_in_executor(None, _dedup_entries_store)
+    if _HAS_WATCHFILES:
+        loop.run_in_executor(None, _watch_folo_files)
     if not _HAS_APSCHEDULER:
         return
     scheduler = AsyncIOScheduler()
@@ -557,11 +619,102 @@ if _STORE_PATH.exists():
     except Exception as _e:
         logger.warning(f"Could not restore entries_store: {_e}")
 
+
+def _save_store_atomically():
+    """原子写入 entries_store 到磁盘，防止并发写损坏文件。"""
+    import time as _t
+    _tmp = str(_STORE_PATH) + ".tmp"
+    try:
+        with open(_tmp, "w", encoding="utf-8") as f:
+            json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+        # Windows 上 os.replace 可能因目标文件被读取而失败，加重试
+        for _attempt in range(3):
+            try:
+                os.replace(_tmp, str(_STORE_PATH))
+                return
+            except OSError:
+                if _attempt < 2:
+                    _t.sleep(0.2)
+                else:
+                    raise
+    except Exception:
+        if os.path.exists(_tmp):
+            try:
+                os.remove(_tmp)
+            except OSError:
+                pass
+        raise
+
+
 # ── Static Files ──
 
 frontend_dir = _root / "frontend"
 if frontend_dir.exists():
     app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="frontend")
+
+
+# ── Report Engine API ──
+
+@app.get("/api/report/status")
+async def report_status():
+    """获取报告引擎状态。"""
+    from src.report_engine.report_generator import get_report_generator
+    gen = get_report_generator()
+    return gen.get_status()
+
+
+@app.get("/api/report/templates")
+async def report_templates():
+    """获取可用报告模板列表。"""
+    from src.report_engine.report_generator import get_report_generator
+    gen = get_report_generator()
+    return {"templates": gen.get_templates()}
+
+
+@app.post("/api/report/generate")
+async def report_generate(request: Request):
+    """启动报告生成任务。"""
+    from src.report_engine.report_generator import get_report_generator
+    gen = get_report_generator()
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    query = body.get("query", "口腔护理行业品牌监测报告")
+    days = int(body.get("days", 30))
+    template_name = body.get("template")
+    try:
+        task_id = gen.start_report(entries_store, query=query, days=days, template_name=template_name)
+        return {"task_id": task_id, "status": "started"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/report/progress/{task_id}")
+async def report_progress(task_id: str):
+    """查询报告生成进度。"""
+    from src.report_engine.report_generator import get_report_generator
+    gen = get_report_generator()
+    task = gen.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task.to_dict()
+
+
+@app.get("/api/report/result/{task_id}")
+async def report_result(task_id: str):
+    """获取报告 HTML 内容。"""
+    from src.report_engine.report_generator import get_report_generator
+    gen = get_report_generator()
+    html = gen.get_task_html(task_id)
+    if html is None:
+        task = gen.get_task(task_id)
+        if task and task.status == "failed":
+            raise HTTPException(status_code=500, detail=task.error or "Generation failed")
+        if task and task.status == "running":
+            raise HTTPException(status_code=202, detail="Still generating")
+        raise HTTPException(status_code=404, detail="Task not found or not completed")
+    return HTMLResponse(content=html)
 
 
 # ── Page Routes ──
@@ -581,10 +734,11 @@ async def login_page():
 
 @app.get("/{page}")
 async def serve_page(page: str):
+    # 只允许字母、数字、连字符、下划线
+    if not re.match(r'^[a-zA-Z0-9_-]+$', page):
+        return HTMLResponse("<h1>404 Not Found</h1>", status_code=404)
     if page in PAGE_NAMES:
         return _serve_html(page)
-    if "." in page:
-        return HTMLResponse("<h1>404 Not Found</h1>", status_code=404)
     # Redirect unknown pages to index
     return _serve_html("index")
 
@@ -718,6 +872,15 @@ async def run_pipeline(background_tasks: BackgroundTasks):
 
     background_tasks.add_task(_run_pipeline_background, True)
     return {"success": True, "message": "Pipeline started in background", "timestamp": datetime.now().isoformat()}
+
+
+@app.post("/api/xhs/search/run")
+async def run_xhs_search(background_tasks: BackgroundTasks):
+    """手动触发小红书搜索（含固定博主监听）。"""
+    if _xhs_search_running:
+        raise HTTPException(status_code=409, detail="XHS search is already running")
+    background_tasks.add_task(_run_xhs_search_background)
+    return {"success": True, "message": "XHS search started in background"}
 
 
 @app.get("/api/pipeline/status")
@@ -1128,8 +1291,8 @@ def _fetch_and_store_comments(entries: list, token: str):
     if fetched > 0:
         logger.info(f"Fetched comments for {fetched} entries")
         try:
-            with open(_STORE_PATH, "w", encoding="utf-8") as f:
-                json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+            with _store_lock:
+                _save_store_atomically()
         except Exception as e:
             logger.warning(f"Could not save entries_store after comment fetch: {e}")
 
@@ -1195,8 +1358,8 @@ async def get_note_comments(note_id: str, sort: str = "latest", force: int = 0):
             em["comment_analysis"] = analysis
             entry["engagement_metrics"] = em
             try:
-                with open(_STORE_PATH, "w", encoding="utf-8") as f:
-                    json.dump(list(entries_store.values()), f, ensure_ascii=False, default=str)
+                with _store_lock:
+                    _save_store_atomically()
             except Exception:
                 pass
             break
@@ -1216,20 +1379,31 @@ async def upload_export(file: UploadFile = File(...), background_tasks: Backgrou
     if not file.filename.endswith((".json", ".csv", ".db")):
         raise HTTPException(status_code=400, detail="Only .db, .json, and .csv files are supported")
 
-    file_path = exports_dir / file.filename
+    # 防止路径穿越
+    safe_name = os.path.basename(file.filename)
+    if ".." in safe_name or "/" in safe_name or "\\" in safe_name:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    file_path = exports_dir / safe_name
     try:
+        # 限制上传文件大小为 50MB
+        MAX_UPLOAD_SIZE = 50 * 1024 * 1024
         content = await file.read()
+        if len(content) > MAX_UPLOAD_SIZE:
+            raise HTTPException(status_code=413, detail="File too large (max 50MB)")
         file_path.write_bytes(content)
-        logger.info(f"Export file uploaded: {file.filename} ({len(content)} bytes)")
+        logger.info(f"Export file uploaded: {safe_name} ({len(content)} bytes)")
         if background_tasks is not None:
             background_tasks.add_task(_run_pipeline_background)
         return {
             "success": True,
-            "filename": file.filename,
+            "filename": safe_name,
             "size": len(content),
             "path": str(file_path),
             "pipeline_triggered": True,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

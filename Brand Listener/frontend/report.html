@@ -26,7 +26,14 @@
   <div class="ml-64 p-8">
     <div class="mb-6"><h1 class="text-2xl font-bold text-slate-900">报告生成中心</h1><p class="text-sm text-slate-500 mt-1">一键生成品牌竞争态势报告</p></div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+    <!-- Mode Tabs -->
+    <div class="flex gap-1 mb-6 bg-slate-100 rounded-lg p-1 w-fit">
+      <button id="tabStats" class="mode-tab px-4 py-2 rounded-md text-sm font-medium bg-white text-slate-900 shadow-sm transition" onclick="switchMode('stats')">数据统计</button>
+      <button id="tabAI" class="mode-tab px-4 py-2 rounded-md text-sm font-medium text-slate-500 hover:text-slate-700 transition" onclick="switchMode('ai')">AI 分析</button>
+    </div>
+
+    <!-- Stats Mode (original) -->
+    <div id="statsMode" class="grid grid-cols-1 xl:grid-cols-3 gap-8">
       <!-- Left: config -->
       <div class="xl:col-span-1 space-y-4">
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
@@ -45,8 +52,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Actions -->
         <div class="flex gap-3">
           <button id="genReportBtn" class="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg shadow-lg shadow-indigo-200/50 text-sm transition">
             <iconify-icon icon="mdi:file-document" class="text-lg"></iconify-icon>生成报告
@@ -55,17 +60,48 @@
             <iconify-icon icon="mdi:microsoft-powerpoint" class="text-lg"></iconify-icon>导出 PPT
           </button>
         </div>
-
-        <!-- AI Tip -->
         <div id="aiTip" class="bg-indigo-900 rounded-2xl p-5 text-white">
           <div class="flex items-start gap-3"><iconify-icon icon="mdi:lightbulb-on" class="text-amber-300 text-xl shrink-0"></iconify-icon><div><h4 class="font-medium text-sm mb-1">AI 智能摘要提示</h4><p class="text-xs text-indigo-200 leading-relaxed" id="aiTipText">点击"生成报告"获取数据洞察。</p></div></div>
         </div>
       </div>
-
       <!-- Right: preview -->
       <div class="xl:col-span-2">
         <div id="reportPreview" class="min-h-[600px] bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
           <div class="text-sm text-slate-400 text-center py-12"><iconify-icon icon="mdi:file-document" class="text-4xl text-slate-200 mb-2 block"></iconify-icon>点击"生成报告"预览</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Mode -->
+    <div id="aiMode" class="hidden grid grid-cols-1 xl:grid-cols-3 gap-8">
+      <!-- Left: AI config -->
+      <div class="xl:col-span-1 space-y-4">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <h3 class="font-semibold text-slate-900 mb-4">AI 报告配置</h3>
+          <div class="space-y-4">
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">报告主题</label><input id="aiQuery" value="口腔护理行业品牌监测报告" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="输入报告主题或分析方向" /></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">数据范围</label><select id="aiDays" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"><option value="7">最近 7 天</option><option value="30" selected>最近 30 天</option><option value="90">最近 90 天</option></select></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">报告模板</label><select id="aiTemplate" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"><option value="">自动选择</option></select></div>
+          </div>
+        </div>
+        <button id="aiGenBtn" class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg shadow-lg shadow-indigo-200/50 text-sm transition">
+          <iconify-icon icon="mdi:robot" class="text-lg"></iconify-icon>生成 AI 报告
+        </button>
+        <!-- Progress -->
+        <div id="aiProgress" class="hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <h4 class="font-medium text-sm text-slate-700 mb-3">生成进度</h4>
+          <div class="w-full bg-slate-100 rounded-full h-2 mb-2"><div id="aiProgressBar" class="bg-indigo-600 h-2 rounded-full transition-all duration-500" style="width:0%"></div></div>
+          <p class="text-xs text-slate-500" id="aiProgressMsg">等待中...</p>
+        </div>
+        <!-- Engine Status -->
+        <div id="engineStatus" class="bg-slate-800 rounded-2xl p-4 text-xs text-slate-400">
+          <div class="flex items-center gap-2 mb-1"><span id="engineDot" class="w-2 h-2 rounded-full bg-yellow-400"></span><span id="engineText">检查引擎状态...</span></div>
+        </div>
+      </div>
+      <!-- Right: AI report preview -->
+      <div class="xl:col-span-2">
+        <div id="aiReportPreview" class="min-h-[600px] bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div class="text-sm text-slate-400 text-center py-12"><iconify-icon icon="mdi:robot" class="text-4xl text-slate-200 mb-2 block"></iconify-icon>配置参数后点击"生成 AI 报告"</div>
         </div>
       </div>
     </div>
@@ -76,6 +112,22 @@
     const TYPE_LABELS = { new_product: '新品发布', promotion: '促销活动', kol_collab: 'KOL合作', user_engagement: '用户互动', offline_event: '线下活动', corporate_news: '企业新闻', product_content: '产品内容', brand_content: '品牌内容' };
     const PLATFORM_LABELS = { weibo: '微博', xiaohongshu: '小红书', bilibili: 'B站' };
 
+    // ── Mode Switch ──
+    function switchMode(mode) {
+      document.getElementById('statsMode').classList.toggle('hidden', mode !== 'stats');
+      document.getElementById('aiMode').classList.toggle('hidden', mode !== 'ai');
+      document.getElementById('tabStats').classList.toggle('bg-white', mode === 'stats');
+      document.getElementById('tabStats').classList.toggle('text-slate-900', mode === 'stats');
+      document.getElementById('tabStats').classList.toggle('shadow-sm', mode === 'stats');
+      document.getElementById('tabStats').classList.toggle('text-slate-500', mode !== 'stats');
+      document.getElementById('tabAI').classList.toggle('bg-white', mode === 'ai');
+      document.getElementById('tabAI').classList.toggle('text-slate-900', mode === 'ai');
+      document.getElementById('tabAI').classList.toggle('shadow-sm', mode === 'ai');
+      document.getElementById('tabAI').classList.toggle('text-slate-500', mode !== 'ai');
+      if (mode === 'ai') checkEngineStatus();
+    }
+
+    // ── Stats Mode (original) ──
     function todayStr() { return new Date().toISOString().split('T')[0]; }
     function daysAgoStr(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().split('T')[0]; }
 
@@ -83,89 +135,44 @@
       const title = document.getElementById('reportTitle').value || '品牌报告';
       const dateStart = document.getElementById('dateStart').value;
       const dateEnd = document.getElementById('dateEnd').value;
-      // Calculate days from date range
       const startD = new Date(dateStart);
       const endD = new Date(dateEnd);
       const days = Math.max(1, Math.round((endD - startD) / 86400000));
-
       const btn = document.getElementById('genReportBtn');
       btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> 生成中...';
-
       try {
-        const [stats, cloud] = await Promise.all([
-          fetchEntryStats(days),
-          fetchKeywordCloud(days, 15),
-        ]);
+        const [stats, cloud] = await Promise.all([fetchEntryStats(days), fetchKeywordCloud(days, 15)]);
         renderReport(title, dateStart, dateEnd, stats, cloud);
         updateAiTip(stats);
         btn.innerHTML = '<iconify-icon icon="mdi:check-circle"></iconify-icon> 已生成';
         setTimeout(() => { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:file-document"></iconify-icon> 生成报告'; }, 1500);
-      } catch (e) {
-        console.error('Report generation error:', e);
-        btn.innerHTML = '失败'; btn.disabled = false;
-      }
+      } catch (e) { console.error('Report generation error:', e); btn.innerHTML = '失败'; btn.disabled = false; }
     }
 
     function renderReport(title, dateStart, dateEnd, stats, cloud) {
       const el = document.getElementById('reportPreview');
       const mods = [...document.querySelectorAll('.mod-check:checked')].map(c => c.dataset.mod);
       const now = new Date().toLocaleString('zh-CN');
-
       let sections = '';
-
       if (mods.includes('overview')) {
         const platforms = Object.entries(stats.by_platform || {}).map(([k, v]) => `<span class="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded text-xs">${PLATFORM_LABELS[k] || k} <strong>${v}</strong></span>`).join(' ');
-        sections += `<div class="mb-8">
-          <h2 class="text-lg font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">一、数据概览</h2>
-          <div class="bg-slate-50 rounded-xl p-4 mb-4">
-            <div class="grid grid-cols-2 gap-3 text-sm">
-              <div><span class="text-slate-400">总条目数：</span><span class="font-medium">${stats.total_entries}</span></div>
-              <div><span class="text-slate-400">追踪品牌：</span><span class="font-medium">${(stats.top_brands || []).length}</span></div>
-              <div><span class="text-slate-400">时间范围：</span><span class="font-medium">${stats.date_range?.from || '-'} ~ ${stats.date_range?.to || '-'}</span></div>
-              <div><span class="text-slate-400">日均发文：</span><span class="font-medium">${(stats.total_entries / Math.max(1, (stats.entries_per_day || []).length)).toFixed(1)}</span></div>
-            </div>
-          </div>
-          <div class="flex flex-wrap gap-2">${platforms}</div>
-        </div>`;
+        sections += `<div class="mb-8"><h2 class="text-lg font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">一、数据概览</h2><div class="bg-slate-50 rounded-xl p-4 mb-4"><div class="grid grid-cols-2 gap-3 text-sm"><div><span class="text-slate-400">总条目数：</span><span class="font-medium">${stats.total_entries}</span></div><div><span class="text-slate-400">追踪品牌：</span><span class="font-medium">${(stats.top_brands || []).length}</span></div><div><span class="text-slate-400">时间范围：</span><span class="font-medium">${stats.date_range?.from || '-'} ~ ${stats.date_range?.to || '-'}</span></div><div><span class="text-slate-400">日均发文：</span><span class="font-medium">${(stats.total_entries / Math.max(1, (stats.entries_per_day || []).length)).toFixed(1)}</span></div></div></div><div class="flex flex-wrap gap-2">${platforms}</div></div>`;
       }
-
       if (mods.includes('tags')) {
         const tagRows = (stats.top_tags || []).slice(0, 10).map((t, i) => `<tr class="border-b border-slate-50"><td class="py-1.5 text-slate-400 w-6">${i+1}</td><td class="py-1.5 font-medium">${escapeHtml(t.tag)}</td><td class="py-1.5 text-right">${t.count}</td></tr>`).join('');
-        sections += `<div class="mb-8">
-          <h2 class="text-lg font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">二、热门标签 TOP 10</h2>
-          <table class="w-full text-sm"><thead><tr class="text-xs text-slate-400 border-b border-slate-100"><th class="w-6 py-1 text-left">#</th><th class="py-1 text-left">标签</th><th class="py-1 text-right">出现次数</th></tr></thead><tbody>${tagRows}</tbody></table>
-        </div>`;
+        sections += `<div class="mb-8"><h2 class="text-lg font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">二、热门标签 TOP 10</h2><table class="w-full text-sm"><thead><tr class="text-xs text-slate-400 border-b border-slate-100"><th class="w-6 py-1 text-left">#</th><th class="py-1 text-left">标签</th><th class="py-1 text-right">出现次数</th></tr></thead><tbody>${tagRows}</tbody></table></div>`;
       }
-
       if (mods.includes('brands')) {
         const brandRows = (stats.top_brands || []).slice(0, 8).map((b, i) => `<tr class="border-b border-slate-50"><td class="py-1.5 text-slate-400 w-6">${i+1}</td><td class="py-1.5 font-medium">${escapeHtml(b.brand)}</td><td class="py-1.5 text-right">${b.count}</td></tr>`).join('');
-        sections += `<div class="mb-8">
-          <h2 class="text-lg font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">三、品牌发布排行</h2>
-          <table class="w-full text-sm"><thead><tr class="text-xs text-slate-400 border-b border-slate-100"><th class="w-6 py-1 text-left">#</th><th class="py-1 text-left">品牌</th><th class="py-1 text-right">内容数</th></tr></thead><tbody>${brandRows}</tbody></table>
-        </div>`;
+        sections += `<div class="mb-8"><h2 class="text-lg font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">三、品牌发布排行</h2><table class="w-full text-sm"><thead><tr class="text-xs text-slate-400 border-b border-slate-100"><th class="w-6 py-1 text-left">#</th><th class="py-1 text-left">品牌</th><th class="py-1 text-right">内容数</th></tr></thead><tbody>${brandRows}</tbody></table></div>`;
       }
-
       if (mods.includes('collab')) {
         const types = stats.by_update_type || {};
         const typeEntries = Object.entries(types).sort((a, b) => b[1] - a[1]);
         const typeRows = typeEntries.map(([k, v]) => `<div class="flex justify-between text-sm py-1 border-b border-slate-50"><span>${TYPE_LABELS[k] || k}</span><span class="font-medium">${v}</span></div>`).join('');
-        sections += `<div class="mb-8">
-          <h2 class="text-lg font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">四、内容类型分布</h2>
-          ${typeRows}
-        </div>`;
+        sections += `<div class="mb-8"><h2 class="text-lg font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">四、内容类型分布</h2>${typeRows}</div>`;
       }
-
-      el.innerHTML = `
-        <div class="max-w-[595px] mx-auto shadow-2xl rounded-xl overflow-hidden">
-          <div class="bg-white p-10">
-            <div class="flex items-center gap-2 mb-6"><iconify-icon icon="mdi:ShieldSearch" class="text-2xl text-indigo-400"></iconify-icon><span class="font-bold text-sm text-slate-400">BrandListen AI</span></div>
-            <h1 class="text-2xl font-bold text-slate-900 mb-2">${escapeHtml(title)}</h1>
-            <p class="text-sm text-slate-400 mb-6">报告周期: ${dateStart} ~ ${dateEnd} · 生成时间: ${now}</p>
-            <div class="border-t border-slate-100 pt-6">${sections}</div>
-          </div>
-          <div class="bg-slate-50 px-10 py-3 text-xs text-slate-400 flex justify-between"><span>BrandListen AI 自动生成</span><span>CONFIDENTIAL</span></div>
-        </div>
-      `;
+      el.innerHTML = `<div class="max-w-[595px] mx-auto shadow-2xl rounded-xl overflow-hidden"><div class="bg-white p-10"><div class="flex items-center gap-2 mb-6"><iconify-icon icon="mdi:ShieldSearch" class="text-2xl text-indigo-400"></iconify-icon><span class="font-bold text-sm text-slate-400">BrandListen AI</span></div><h1 class="text-2xl font-bold text-slate-900 mb-2">${escapeHtml(title)}</h1><p class="text-sm text-slate-400 mb-6">报告周期: ${dateStart} ~ ${dateEnd} · 生成时间: ${now}</p><div class="border-t border-slate-100 pt-6">${sections}</div></div><div class="bg-slate-50 px-10 py-3 text-xs text-slate-400 flex justify-between"><span>BrandListen AI 自动生成</span><span>CONFIDENTIAL</span></div></div>`;
     }
 
     function updateAiTip(stats) {
@@ -180,20 +187,134 @@
       document.getElementById('aiTipText').textContent = text;
     }
 
+    // ── AI Mode ──
+    let aiPollTimer = null;
+
+    async function checkEngineStatus() {
+      try {
+        const resp = await fetch('/api/report/status');
+        const data = await resp.json();
+        const dot = document.getElementById('engineDot');
+        const text = document.getElementById('engineText');
+        if (data.ready) {
+          dot.className = 'w-2 h-2 rounded-full bg-green-400';
+          text.textContent = '报告引擎就绪';
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-red-400';
+          text.textContent = '引擎未就绪: ' + (data.error || '未知错误');
+        }
+      } catch { /* ignore */ }
+    }
+
+    async function loadTemplates() {
+      try {
+        const resp = await fetch('/api/report/templates');
+        const data = await resp.json();
+        const sel = document.getElementById('aiTemplate');
+        (data.templates || []).forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.filename;
+          opt.textContent = t.name;
+          sel.appendChild(opt);
+        });
+      } catch { /* ignore */ }
+    }
+
+    async function generateAIReport() {
+      const query = document.getElementById('aiQuery').value || '口腔护理行业品牌监测报告';
+      const days = parseInt(document.getElementById('aiDays').value) || 30;
+      const template = document.getElementById('aiTemplate').value || '';
+
+      const btn = document.getElementById('aiGenBtn');
+      btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> 启动中...';
+
+      try {
+        const resp = await fetch('/api/report/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, days, template: template || undefined }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || '启动失败');
+
+        const taskId = data.task_id;
+        document.getElementById('aiProgress').classList.remove('hidden');
+        btn.innerHTML = '<iconify-icon icon="mdi:loading" class="animate-spin"></iconify-icon> 生成中...';
+
+        // Poll progress
+        pollProgress(taskId);
+      } catch (e) {
+        console.error('AI report error:', e);
+        btn.innerHTML = '失败'; btn.disabled = false;
+        alert('启动失败: ' + e.message);
+      }
+    }
+
+    function pollProgress(taskId) {
+      if (aiPollTimer) clearInterval(aiPollTimer);
+      aiPollTimer = setInterval(async () => {
+        try {
+          const resp = await fetch(`/api/report/progress/${taskId}`);
+          const data = await resp.json();
+
+          document.getElementById('aiProgressBar').style.width = data.progress + '%';
+          document.getElementById('aiProgressMsg').textContent = data.message || `${data.progress}%`;
+
+          if (data.status === 'completed') {
+            clearInterval(aiPollTimer);
+            document.getElementById('aiGenBtn').innerHTML = '<iconify-icon icon="mdi:check-circle"></iconify-icon> 已完成';
+            document.getElementById('aiGenBtn').disabled = false;
+            // Load report
+            loadAIReport(taskId);
+          } else if (data.status === 'failed') {
+            clearInterval(aiPollTimer);
+            document.getElementById('aiGenBtn').innerHTML = '失败';
+            document.getElementById('aiGenBtn').disabled = false;
+            document.getElementById('aiProgressMsg').textContent = '失败: ' + (data.error || '未知错误');
+          }
+        } catch (e) {
+          console.error('Poll error:', e);
+        }
+      }, 2000);
+    }
+
+    async function loadAIReport(taskId) {
+      try {
+        const resp = await fetch(`/api/report/result/${taskId}`);
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.detail || '获取报告失败');
+        }
+        const html = await resp.text();
+        const preview = document.getElementById('aiReportPreview');
+        preview.innerHTML = `<iframe id="aiReportFrame" class="w-full border-0" style="min-height:800px"></iframe>`;
+        const iframe = document.getElementById('aiReportFrame');
+        iframe.contentDocument.open();
+        iframe.contentDocument.write(html);
+        iframe.contentDocument.close();
+        // Auto-resize iframe
+        iframe.onload = () => {
+          try { iframe.style.height = iframe.contentDocument.documentElement.scrollHeight + 'px'; } catch {}
+        };
+      } catch (e) {
+        console.error('Load report error:', e);
+        document.getElementById('aiReportPreview').innerHTML = `<div class="p-6 text-red-500 text-sm">加载失败: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    // ── Init ──
     document.addEventListener('DOMContentLoaded', () => {
-      // Set date defaults
       document.getElementById('dateStart').value = daysAgoStr(7);
       document.getElementById('dateEnd').value = todayStr();
-
-      // Auto-update days when period changes
       document.getElementById('reportPeriod').addEventListener('change', (e) => {
         const map = { week: 7, month: 30, quarter: 90, custom: 7 };
         const days = map[e.target.value] || 7;
         document.getElementById('dateStart').value = daysAgoStr(days);
         document.getElementById('dateEnd').value = todayStr();
       });
-
       document.getElementById('genReportBtn').addEventListener('click', generateReport);
+      document.getElementById('aiGenBtn').addEventListener('click', generateAIReport);
+      loadTemplates();
     });
   </script>
 </body>

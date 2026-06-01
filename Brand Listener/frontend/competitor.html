@@ -378,9 +378,6 @@
     const priceSec = document.getElementById('priceSection');
     const collabSec = document.getElementById('collabSection');
 
-    [feedList, dynamicFeed, ecomSec, socialSec, priceSec, collabSec].forEach(el => {
-      if (!el) return;
-    });
     feedList.style.display = activeTab === 'feed' ? '' : 'none';
     dynamicFeed.style.display = activeTab === 'feed' ? '' : 'none';
     ecomSec.style.display = activeTab === 'ecom' ? '' : 'none';
