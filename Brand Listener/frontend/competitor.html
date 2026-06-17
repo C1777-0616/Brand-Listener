@@ -40,6 +40,7 @@
 <!-- 选项卡导航 -->
 <div class="flex border-b border-slate-200 mb-8 overflow-x-auto" id="tabBar">
 <button class="px-6 py-3 border-b-2 border-indigo-600 text-indigo-600 font-bold whitespace-nowrap tab-btn" data-tab="feed">品牌社媒动态流</button>
+<button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap tab-btn" data-tab="search">关键词搜索</button>
 <button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap tab-btn" data-tab="ecom">电商平台配置</button>
 <button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap tab-btn" data-tab="social">社媒动态</button>
 <button class="px-6 py-3 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 whitespace-nowrap tab-btn" data-tab="price">竞品发布节奏</button>
@@ -84,6 +85,24 @@
 <iconify-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" icon="mdi:magnify"></iconify-icon>
 </div>
 </div>
+
+<!-- 关键词搜索面板 -->
+<div id="searchTab" style="display:none;padding:24px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;margin-bottom:24px;">
+<div style="margin-bottom:24px;">
+<h3 style="font-size:18px;font-weight:600;color:#1e293b;margin-bottom:12px;">小红书关键词搜索</h3>
+<p style="font-size:14px;color:#64748b;margin-bottom:16px;">输入关键词搜索小红书帖子，搜索到的新帖子将自动拉取评论并添加到数据库</p>
+
+<div style="display:flex;gap:12px;margin-bottom:16px;">
+<input id="keywordInput" type="text" placeholder="输入搜索关键词（支持多个，用空格分隔）" style="flex:1;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;focus-ring:2px solid #6366f1;"/>
+<button id="searchBtn" style="padding:10px 24px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;transition:background 0.2s;">搜索</button>
+</div>
+
+<div id="searchStatus" style="display:none;padding:12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;color:#92400e;font-size:13px;"></div>
+
+<div id="searchResults" style="margin-top:16px;"></div>
+</div>
+</div>
+
 <!-- 监听流列表 -->
 <div class="space-y-6" id="feedList">
 <!-- 动态项 1 -->
@@ -226,8 +245,9 @@
       btn.classList.remove('border-transparent', 'text-slate-500');
       btn.classList.add('border-indigo-600', 'text-indigo-600', 'font-bold');
       activeTab = btn.dataset.tab;
-      // 筛选栏：feed 和 collab tab 都显示
+      // 筛选栏和搜索面板：根据选项卡显示/隐藏
       document.getElementById('filterBar').style.display = (activeTab === 'feed' || activeTab === 'collab') ? 'flex' : 'none';
+      document.getElementById('searchTab').style.display = (activeTab === 'search') ? 'block' : 'none';
       // 联动 tab 时，类型下拉替换为联动类型选项
       const typeSelect = document.getElementById('typeSelect');
       if (activeTab === 'collab') {
@@ -1412,6 +1432,80 @@
     document.getElementById('commentPanel').style.display = 'none';
     document.getElementById('commentOverlay').style.display = 'none';
   }
+
+  // ── 关键词搜索功能 ──
+  document.getElementById('searchBtn').addEventListener('click', async () => {
+    const keyword = document.getElementById('keywordInput').value.trim();
+    if (!keyword) {
+      alert('请输入搜索关键词');
+      return;
+    }
+
+    const keywords = keyword.split(/[\s，,]+/).filter(k => k.length > 0);
+    const statusDiv = document.getElementById('searchStatus');
+    const resultsDiv = document.getElementById('searchResults');
+    const btn = document.getElementById('searchBtn');
+
+    btn.disabled = true;
+    btn.textContent = '搜索中...';
+    statusDiv.style.display = 'block';
+    statusDiv.textContent = '正在搜索 ' + keywords.join(', ') + '...';
+    resultsDiv.innerHTML = '';
+
+    try {
+      const resp = await fetch('/api/xhs/search/keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keywords })
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        throw new Error(data.detail || '搜索失败');
+      }
+
+      statusDiv.textContent = `搜索完成！找到 ${data.new_entries} 条新帖子，评论拉取中...`;
+      statusDiv.style.background = '#d1fae5';
+      statusDiv.style.borderColor = '#6ee7b7';
+      statusDiv.style.color = '#065f46';
+
+      resultsDiv.innerHTML = `
+        <div style="padding:12px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;color:#166534;font-size:13px;">
+          <div style="font-weight:600;margin-bottom:8px;">搜索结果</div>
+          <div>关键词: ${keywords.join(', ')}</div>
+          <div>新增帖子: ${data.new_entries} 条</div>
+          <div>数据库总数: ${data.total_entries} 条</div>
+          <div style="margin-top:8px;font-size:12px;color:#059669;">✓ 评论数据将在后台自动拉取，可在"品牌社媒动态流"选项卡中查看</div>
+        </div>
+      `;
+
+      // 清空输入框
+      document.getElementById('keywordInput').value = '';
+
+      // 3秒后自动切换到 feed tab 并刷新数据
+      setTimeout(() => {
+        document.querySelector('[data-tab="feed"]').click();
+        location.reload();
+      }, 3000);
+
+    } catch (e) {
+      statusDiv.textContent = '搜索失败: ' + e.message;
+      statusDiv.style.background = '#fee2e2';
+      statusDiv.style.borderColor = '#fca5a5';
+      statusDiv.style.color = '#991b1b';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '搜索';
+    }
+  });
+
+  // 回车键搜索
+  document.getElementById('keywordInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('searchBtn').click();
+    }
+  });
 
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('platformSelect').addEventListener('change', renderFeed);

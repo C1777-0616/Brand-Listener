@@ -59,7 +59,7 @@ def get_env_bool(key: str, default: bool) -> bool:
 
 
 # FOLO Export Configuration
-FOLO_EXPORT_PATH = get_env_var("FOLO_EXPORT_PATH", "./data/exports")
+FOLO_EXPORT_PATH = get_env_var("FOLO_EXPORT_PATH", os.getenv("DATA_DIR", "/app/data") + "/exports")
 FOLO_EXPORT_PATTERN = get_env_var("FOLO_EXPORT_PATTERN", "*.json")
 FOLO_POLLING_INTERVAL_MINUTES = get_env_int("FOLO_POLLING_INTERVAL_MINUTES", 15)
 FOLO_UPDATE_LOOKBACK_HOURS = get_env_int("FOLO_UPDATE_LOOKBACK_HOURS", 24)
@@ -71,11 +71,15 @@ OFFICIAL_UPDATES_AGENT_TIMEOUT_SECONDS = get_env_int("OFFICIAL_UPDATES_AGENT_TIM
 # API Configuration (optional)
 API_HOST = get_env_var("API_HOST", "0.0.0.0")
 API_PORT = get_env_int("API_PORT", 8000)
-API_RELOAD = get_env_bool("API_RELOAD", True)
+API_RELOAD = get_env_bool("API_RELOAD", False)  # Docker 环境默认不启用热重载
 
 # Logging Configuration
 LOG_LEVEL = get_env_var("LOG_LEVEL", "INFO")
-LOG_FILE = get_env_var("LOG_FILE", "./logs/brand_listener.log")
+LOG_FILE = get_env_var("LOG_FILE", os.getenv("LOG_DIR", "/app/logs") + "/brand_listener.log")
+
+# Data and Log Directories
+DATA_DIR = get_env_var("DATA_DIR", "/app/data")
+LOG_DIR = get_env_var("LOG_DIR", "/app/logs")
 
 
 def get_folo_config() -> Dict[str, Any]:

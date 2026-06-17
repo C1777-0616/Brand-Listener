@@ -19,6 +19,12 @@ from datetime import datetime, timedelta
 _root = Path(__file__).parent
 sys.path.insert(0, str(_root))
 
+# 从环境变量读取数据和日志目录，支持容器部署
+_DATA_DIR = Path(os.getenv("DATA_DIR", "/app/data"))
+_LOG_DIR = Path(os.getenv("LOG_DIR", "/app/logs"))
+_DATA_DIR.mkdir(parents=True, exist_ok=True)
+_LOG_DIR.mkdir(parents=True, exist_ok=True)
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -483,7 +489,16 @@ def _run_xhs_search_background():
             agent.processed_updates.add(note_id)
 
         logger.info(f"Auto XHS search started: {_XHS_SEARCH_KEYWORDS}")
+
+        # 1. 关键词搜索
         updates = agent.search_by_keywords(_XHS_SEARCH_KEYWORDS, 20)
+
+        # 2. 品牌官方账号监听
+        from datetime import datetime, timedelta
+        since = datetime.now() - timedelta(days=30)
+        monitor_updates = agent.fetch([], since)
+        updates.extend(monitor_updates)
+        logger.info(f"[XHS] 品牌监听获取 {len(monitor_updates)} 条更新")
 
         # 评分
         agent.apply_scores(updates)
@@ -569,13 +584,15 @@ async def _startup():
 
 # ── State ──
 
-exports_dir = _root / "data" / "exports"
-FOLO_DIR = Path("D:/wmz/FOLO")  # FOLO 数据库导出目录
-_RESULT_CACHE_PATH = _root / "data" / "latest_result.json"
+# ── State ──
+
+exports_dir = _DATA_DIR / "exports"
+FOLO_DIR = Path(os.getenv("FOLO_DIR", "D:/wmz/FOLO"))  # FOLO 数据库导出目录，可通过环境变量配置
+_RESULT_CACHE_PATH = _DATA_DIR / "latest_result.json"
 
 # Ensure directories exist
 exports_dir.mkdir(parents=True, exist_ok=True)
-(_root / "data" / "exports").mkdir(parents=True, exist_ok=True)
+(_DATA_DIR / "exports").mkdir(parents=True, exist_ok=True)
 
 pipeline_running = False
 last_run_at: str = ""
@@ -605,7 +622,7 @@ if _RESULT_CACHE_PATH.exists():
         logger.warning(f"Could not restore latest_result: {_e}")
 
 # 持久化条目仓库：key="{source_url}:{id}"，跨 pipeline 运行增量累积，重复条目自动跳过
-_STORE_PATH = _root / "data" / "entries_store.json"
+_STORE_PATH = _DATA_DIR / "entries_store.json"
 entries_store: Dict[str, Any] = {}
 if _STORE_PATH.exists():
     try:
@@ -881,6 +898,139 @@ async def run_xhs_search(background_tasks: BackgroundTasks):
         raise HTTPException(status_code=409, detail="XHS search is already running")
     background_tasks.add_task(_run_xhs_search_background)
     return {"success": True, "message": "XHS search started in background"}
+
+
+@app.post("/api/xhs/search/keywords")
+async def search_keywords(request: Request, background_tasks: BackgroundTasks):
+    """按自定义关键词搜索小红书帖子，并自动拉取评论。返回新增条目列表。"""
+    global _xhs_search_running
+
+    try:
+        body = await request.json()
+        keywords = body.get("keywords", [])
+    except:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    if _xhs_search_running:
+        raise HTTPException(status_code=409, detail="XHS search is already running")
+
+    if not keywords or not isinstance(keywords, list):
+        raise HTTPException(status_code=400, detail="keywords must be a non-empty list")
+
+    token = _read_xhs_api_token()
+    if not token:
+        raise HTTPException(status_code=503, detail="XHS_API_TOKEN not configured")
+
+    _xhs_search_running = True
+
+    try:
+        from src.agents.searcher.xiaohongshu_updates_agent import XiaohongshuUpdatesAgent
+        agent = XiaohongshuUpdatesAgent({
+            "xhs_api_token": token,
+            "xhs_monitor_targets": [],
+            "lookback_hours": 720,
+        })
+
+        # 加载已有去重集
+        for k in entries_store:
+            note_id = k.rsplit(":", 1)[-1]
+            agent.processed_updates.add(note_id)
+
+        logger.info(f"Custom keyword search started: {keywords}")
+        updates = agent.search_by_keywords(keywords, 20)
+
+        # 评分
+        agent.apply_scores(updates)
+
+        # 过滤
+        updates = [u for u in updates if not ((u.engagement_metrics or {}).get("ai_tags") == ["教程科普"])]
+        updates_dict = [u.model_dump() if hasattr(u, 'model_dump') else vars(u) for u in updates]
+        updates = [u for u, d in zip(updates, updates_dict)
+                   if _is_oral_related(d) and not _is_clinic_ad(d)]
+
+        # 增量合并
+        new_entries = []
+        for u in updates:
+            key = f"{u.source_url}:{u.id}"
+            if key not in entries_store:
+                entry_dict = u.model_dump() if hasattr(u, 'model_dump') else vars(u)
+                entries_store[key] = entry_dict
+                new_entries.append(entry_dict)
+
+        logger.info(f"Keyword search done: found {len(new_entries)} new entries")
+
+        # 持久化
+        if new_entries:
+            try:
+                with _store_lock:
+                    _save_store_atomically()
+            except Exception as e:
+                logger.warning(f"Could not save entries_store: {e}")
+
+            # 后台拉取评论
+            background_tasks.add_task(_fetch_and_store_comments, new_entries, token)
+
+        return {
+            "success": True,
+            "keywords": keywords,
+            "new_entries": len(new_entries),
+            "total_entries": len(entries_store),
+            "message": f"Found {len(new_entries)} new entries, comments fetching in background"
+        }
+    except Exception as e:
+        logger.error(f"Keyword search failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        _xhs_search_running = False
+
+
+_comment_backfill_running = False
+_comment_backfill_progress = {"done": 0, "total": 0, "fetched": 0}
+
+
+def _run_comment_backfill(limit: int = 2000):
+    """后台批量补拉所有缺评论的存量帖子。"""
+    global _comment_backfill_running, _comment_backfill_progress
+    _comment_backfill_running = True
+    try:
+        token = _read_xhs_api_token()
+        if not token:
+            logger.warning("Comment backfill: no XHS API token, abort")
+            return
+        # 找出所有缺评论且未被标记空壳的小红书帖子
+        pending = []
+        for e in entries_store.values():
+            src = e.get("source_url", "") or ""
+            if not src.startswith("xhs:"):
+                continue
+            em = e.get("engagement_metrics") or {}
+            if em.get("comments") or em.get("comment_analysis"):
+                continue
+            pending.append(e)
+        _comment_backfill_progress = {"done": 0, "total": len(pending), "fetched": 0}
+        logger.info(f"Comment backfill: {len(pending)} entries pending")
+        # 复用 _fetch_and_store_comments（跳过规则保留，max_per_run 调高）
+        _fetch_and_store_comments(pending, token, max_per_run=limit)
+        logger.info("Comment backfill finished")
+    except Exception as e:
+        logger.error(f"Comment backfill failed: {e}", exc_info=True)
+    finally:
+        _comment_backfill_running = False
+
+
+@app.post("/api/xhs/comments/backfill")
+async def backfill_comments(background_tasks: BackgroundTasks, limit: int = 2000):
+    """批量补拉所有缺评论的存量帖子（保留跳过规则）。"""
+    if _comment_backfill_running:
+        raise HTTPException(status_code=409, detail="Comment backfill is already running")
+    background_tasks.add_task(_run_comment_backfill, limit)
+    return {"success": True, "message": "Comment backfill started in background"}
+
+
+@app.get("/api/xhs/comments/backfill/status")
+async def backfill_status():
+    """补拉进度。"""
+    return {"running": _comment_backfill_running, "progress": _comment_backfill_progress}
 
 
 @app.get("/api/pipeline/status")
@@ -1209,14 +1359,31 @@ async def xhs_analysis(days: int = 30):
     }
 
 
-def _fetch_and_store_comments(entries: list, token: str):
+def _parse_count(val) -> int:
+    """把点赞/评论数解析成整数，兼容 '1.2万'、'100+'、'1,234'、None 等格式。"""
+    if isinstance(val, (int, float)):
+        return int(val)
+    if not val:
+        return 0
+    s = str(val).strip().replace(",", "").replace("+", "")
+    try:
+        if "万" in s:
+            return int(float(s.replace("万", "")) * 10000)
+        if "k" in s.lower():
+            return int(float(s.lower().replace("k", "")) * 1000)
+        return int(float(s))
+    except (ValueError, TypeError):
+        return 0
+
+
+def _fetch_and_store_comments(entries: list, token: str, max_per_run: int = 50):
     """批量拉取评论并存入 entries_store（同步函数，应在后台线程执行）。
 
     省钱策略：
     - 仅拉取近30天帖子（旧帖子评论不再变化）
     - 跳过低互动帖子（点赞<10）
     - 每篇最多2页（20条评论，覆盖90%场景）
-    - 每次运行最多处理50条
+    - 每次运行最多处理 max_per_run 条（默认50，批量补拉可调高）
     - 已有评论的帖子跳过
     """
     from src.agents.searcher.xhs_api.note_comments import XHSNoteComments
@@ -1224,7 +1391,6 @@ def _fetch_and_store_comments(entries: list, token: str):
 
     crawler = XHSNoteComments(token)
     fetched = 0
-    max_per_run = 50
     thirty_days_ago = datetime.now() - timedelta(days=30)
 
     for entry in entries:
@@ -1242,7 +1408,7 @@ def _fetch_and_store_comments(entries: list, token: str):
         if em.get("comments") or em.get("comment_analysis"):
             continue
         # 跳过低互动帖子（点赞<10）
-        likes = em.get("liked_count") or em.get("likes") or 0
+        likes = _parse_count(em.get("liked_count") or em.get("likes") or 0)
         if likes < 10:
             # 标记为已处理（空评论），避免下次再检查
             em["comment_analysis"] = {"total_comments": 0, "sentiment": {"positive": 0, "negative": 0, "neutral": 0}, "selling_points": []}
@@ -1285,8 +1451,11 @@ def _fetch_and_store_comments(entries: list, token: str):
                 if key in entries_store:
                     entries_store[key] = entry
                 fetched += 1
+                _comment_backfill_progress["fetched"] = fetched
         except Exception as e:
             logger.warning(f"Comment fetch failed for {note_id}: {e}")
+        finally:
+            _comment_backfill_progress["done"] = _comment_backfill_progress.get("done", 0) + 1
 
     if fetched > 0:
         logger.info(f"Fetched comments for {fetched} entries")
@@ -1478,4 +1647,6 @@ if __name__ == "__main__":
         host=config["host"],
         port=config["port"],
         reload=config["reload"],
+        # 排除数据文件：后台写 entries_store.json / db 不应触发服务器重启
+        reload_excludes=["data/*", "data/**/*", "*.json", "*.db", "*.log"],
     )
